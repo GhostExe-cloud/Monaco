@@ -70,23 +70,9 @@
         }
         #new-tab-btn:hover { background: var(--hover-color); color: #fff; border-color: #444; }
 
-        #palette {
-            position: fixed; top: -100px; left: 50%; transform: translateX(-50%);
-            width: 450px; background: rgba(15, 15, 15, 0.95); 
-            border: 1px solid #333; border-radius: 10px; z-index: 10000; padding: 12px;
-            transition: top 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28); 
-            box-shadow: 0 25px 50px rgba(0,0,0,0.9);
-            backdrop-filter: blur(10px);
-        }
-        #palette.open { top: 60px; }
-        #palette input {
-            width: 100%; background: #000; border: 1px solid #222;
-            color: #fff; padding: 10px; border-radius: 5px; 
-            outline: none; font-family: inherit; font-size: 14px;
-        }
-
         #container { flex-grow: 1; }
 
+        /* --- NOTIFICATION STYLES --- */
         .toast-container { position: fixed; bottom: 25px; right: 25px; display: flex; flex-direction: column-reverse; gap: 8px; z-index: 9999; }
         .toast {
             padding: 12px 20px; background: #0f0f0f; border: 1px solid #222; 
@@ -101,12 +87,9 @@
 </head>
 <body>
 
-    <div id="palette">
-        <input type="text" id="palette-input" placeholder="Type a command (e.g. >clear) or script name...">
-    </div>
-
     <div id="main-container">
         <div class="toast-container" id="toast-container"></div>
+
         <div id="tab-bar">
             <div id="new-tab-btn">+</div>
         </div>
@@ -119,11 +102,34 @@
 
         let editor, activeTab = null, tabs = [];
 
-        // --- C# BRIDGE FUNCTIONS (FIXES CLEAR & SCRIPT TREE) ---
+        // --- NOTIFICATION ENGINE ---
+        function notify(msg, tag = "INFO") {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = `<span class="toast-tag">${tag}</span> <span>${msg}</span>`;
+            container.appendChild(toast);
+            
+            // Trigger animation
+            setTimeout(() => toast.classList.add('show'), 50);
+            
+            // Auto-remove
+            setTimeout(() => { 
+                toast.classList.remove('show'); 
+                setTimeout(() => toast.remove(), 500); 
+            }, 4000);
+        }
+
+        // --- C# BRIDGE (FIXES CLEAR & SCRIPT TREE) ---
+        // These window-level functions are what your C# ExecuteScriptAsync calls
         window.SetText = function(text) {
             if (editor) {
                 editor.setValue(text);
-                if (activeTab) activeTab.content = text; // Sync current tab
+                if (activeTab) {
+                    activeTab.content = text;
+                }
+                // Notify the user that the bridge worked
+                notify(text === "" ? "Editor Cleared" : "Script Loaded from Tree", "BRIDGE");
             }
         };
 
@@ -131,48 +137,9 @@
             return editor ? editor.getValue() : "";
         };
 
-        // --- Notification Engine ---
-        function notify(msg, tag = "INFO") {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            toast.className = 'toast';
-            toast.innerHTML = `<span class="toast-tag">${tag}</span> <span>${msg}</span>`;
-            container.appendChild(toast);
-            setTimeout(() => toast.classList.add('show'), 50);
-            setTimeout(() => { 
-                toast.classList.remove('show'); 
-                setTimeout(() => toast.remove(), 500); 
-            }, 3000);
-        }
-
-        // --- Persistence ---
-        function saveSession() {
-            if (activeTab) activeTab.content = editor.getValue();
-            const data = tabs.map(t => ({ name: t.name, content: t.content }));
-            localStorage.setItem('provoid_lightning_v2', JSON.stringify(data));
-        }
-
-        function loadSession() {
-            const data = localStorage.getItem('provoid_lightning_v2');
-            if (data) {
-                const saved = JSON.parse(data);
-                saved.forEach(t => createTab(t.name, t.content, false));
-            } else {
-                createTab('Main.lua', '-- Welcome to ProVoid\nprint("Hello World")');
-            }
-        }
-
-        function getNextTabName() {
-            let i = 1;
-            while (true) {
-                const name = `Script ${i}`;
-                if (!tabs.some(t => t.name === name)) return name;
-                i++;
-            }
-        }
-
+        // --- TAB LOGIC ---
         function createTab(name = null, content = '-- ProVoid Script', isNew = true) {
-            const finalName = name || getNextTabName();
+            const finalName = name || `Script ${tabs.length + 1}`;
             const tab = {
                 id: Math.random().toString(36).substr(2, 9),
                 name: finalName,
@@ -184,14 +151,7 @@
             tab.element.draggable = true;
             tab.element.innerHTML = `<span class="tab-lbl">${tab.name}</span><span class="tab-close">×</span>`;
             
-            tab.element.addEventListener('dragstart', () => tab.element.classList.add('dragging'));
-            tab.element.addEventListener('dragend', () => {
-                tab.element.classList.remove('dragging');
-                reorderTabs();
-            });
-
             tab.element.onclick = () => activateTab(tab);
-            tab.element.ondblclick = () => renameTab(tab);
             tab.element.querySelector('.tab-close').onclick = (e) => {
                 e.stopPropagation();
                 closeTab(tab.id);
@@ -201,7 +161,8 @@
             document.getElementById('tab-bar').insertBefore(tab.element, btn);
             tabs.push(tab);
             activateTab(tab);
-            if(isNew) notify(`Created ${finalName}`, "FILE");
+            
+            if(isNew) notify(`Opened ${finalName}`, "FILE");
             return tab;
         }
 
@@ -214,88 +175,25 @@
             tab.element.classList.add('active');
             if (editor) {
                 editor.setValue(tab.content);
-                monaco.editor.setModelLanguage(editor.getModel(), "lua");
             }
         }
 
-        function renameTab(tab) {
-            const lbl = tab.element.querySelector('.tab-lbl');
-            const oldName = tab.name;
-            const input = document.createElement('input');
-            input.className = 'tab-input';
-            input.value = oldName;
-            lbl.replaceWith(input);
-            input.focus();
-            input.select();
-
-            const finish = () => {
-                const newName = input.value.trim() || oldName;
-                tab.name = newName;
-                const newLbl = document.createElement('span');
-                newLbl.className = 'tab-lbl';
-                newLbl.innerText = newName;
-                input.replaceWith(newLbl);
-                if(newName !== oldName) saveSession();
-            };
-            input.onblur = finish;
-            input.onkeydown = (e) => { if(e.key === 'Enter') finish(); };
-        }
-
         function closeTab(id) {
-            if (tabs.length <= 1) return notify("Last script cannot be closed", "ERROR");
+            if (tabs.length <= 1) return notify("Cannot close last tab", "ERROR");
             const idx = tabs.findIndex(t => t.id === id);
             tabs[idx].element.remove();
             tabs.splice(idx, 1);
             if (activeTab.id === id) activateTab(tabs[tabs.length - 1] || tabs[0]);
-            saveSession();
         }
 
-        function reorderTabs() {
-            const currentElements = [...document.querySelectorAll('.tab')];
-            const newTabs = [];
-            currentElements.forEach(el => {
-                const found = tabs.find(t => t.element === el);
-                if (found) newTabs.push(found);
-            });
-            tabs = newTabs;
-            saveSession();
-        }
-
-        const tabBar = document.getElementById('tab-bar');
-        tabBar.addEventListener('dragover', e => {
-            e.preventDefault();
-            const dragging = document.querySelector('.dragging');
-            const afterElement = getDragAfterElement(tabBar, e.clientX);
-            if (afterElement == null) {
-                tabBar.insertBefore(dragging, document.getElementById('new-tab-btn'));
-            } else {
-                tabBar.insertBefore(dragging, afterElement);
-            }
-        });
-
-        function getDragAfterElement(container, x) {
-            const draggables = [...container.querySelectorAll('.tab:not(.dragging)')];
-            return draggables.reduce((closest, child) => {
-                const box = child.getBoundingClientRect();
-                const offset = x - box.left - box.width / 2;
-                if (offset < 0 && offset > closest.offset) {
-                    return { offset: offset, element: child };
-                } else { return closest; }
-            }, { offset: Number.NEGATIVE_INFINITY }).element;
-        }
-
-        // --- Monaco Initialization ---
+        // --- MONACO INIT ---
         require(['vs/editor/editor.main'], function() {
             monaco.editor.defineTheme('provoidUltra', {
-                base: 'vs-dark',
-                inherit: true,
+                base: 'vs-dark', inherit: true,
                 rules: [],
                 colors: {
                     'editor.background': '#080808',
-                    'editor.lineHighlightBackground': '#111111',
-                    'editorCursor.foreground': '#ffffff',
-                    'editorLineNumber.foreground': '#333333',
-                    'editorIndentGuide.background': '#151515'
+                    'editorLineNumber.foreground': '#333333'
                 }
             });
 
@@ -303,16 +201,13 @@
                 theme: 'provoidUltra',
                 language: 'lua',
                 fontSize: 14,
-                fontFamily: 'JetBrains Mono',
                 automaticLayout: true,
-                padding: { top: 15 },
-                minimap: { enabled: true },
-                smoothScrolling: true,
-                cursorBlinking: "smooth"
+                minimap: { enabled: false }
             });
 
-            loadSession();
-            editor.onDidChangeModelContent(() => { saveSession(); });
+            // Start with one tab
+            createTab('Main.lua', '-- ProVoid Lightning v2\nprint("Attached!")', false);
+            notify("Monaco Engine Ready", "SYSTEM");
         });
 
         document.getElementById('new-tab-btn').onclick = () => createTab();
