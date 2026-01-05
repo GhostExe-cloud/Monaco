@@ -2,11 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="utf-8" />
-    <title>Lightning Editor | ProVoid</title>
+    <title>ProVoid Lightning | Ultra</title>
     <style type="text/css">
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&display=swap');
 
         :root {
+            /* ProVoid Signature Palette */
             --bg-color: #080808;
             --text-color: #f0f0f0;
             --accent-color: #ffffff;
@@ -14,12 +15,12 @@
             --border-color: #222222;
             --secondary-bg: #0d0d0d;
             --secondary-text: #808080;
-            --transition-smooth: cubic-bezier(0.4, 0, 0.2, 1);
-            --border-radius-md: 8px;
+            --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --border-radius: 8px;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
-
+        
         body {
             width: 100%; height: 100vh;
             background: var(--bg-color);
@@ -28,96 +29,87 @@
             overflow: hidden;
         }
 
-        #main-container {
-            display: flex; flex-direction: column;
-            height: 100%;
-            background: radial-gradient(circle at top right, #111, #080808);
-        }
+        #main-container { display: flex; flex-direction: column; height: 100%; }
 
-        /* --- Tab Bar Styling --- */
+        /* --- Tab Bar --- */
         #tab-bar {
-            height: 54px;
-            display: flex; align-items: center;
-            padding: 0 15px;
-            gap: 8px;
-            background: rgba(10, 10, 10, 0.95);
-            border-bottom: 1px solid var(--border-color);
+            height: 54px; display: flex; align-items: center;
+            padding: 0 15px; gap: 8px;
+            background: #0a0a0a; border-bottom: 1px solid var(--border-color);
             overflow-x: auto;
         }
 
         .tab {
-            height: 36px; min-width: 130px;
-            padding: 0 14px;
-            background: var(--secondary-bg);
-            border: 1px solid var(--border-color);
-            border-radius: var(--border-radius-md);
-            display: flex; align-items: center; justify-content: space-between;
-            cursor: grab; transition: all 0.3s var(--transition-smooth);
-            font-size: 13px; color: var(--secondary-text);
+            height: 36px; min-width: 140px; padding: 0 12px;
+            background: var(--secondary-bg); border: 1px solid var(--border-color);
+            border-radius: 6px; display: flex; align-items: center; justify-content: space-between;
+            cursor: grab; transition: var(--transition); font-size: 13px; color: var(--secondary-text);
             user-select: none;
         }
 
-        .tab:active { cursor: grabbing; }
-
         .tab.active {
-            background: linear-gradient(145deg, #222, #111);
-            border-color: #666;
-            color: var(--text-color);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            background: linear-gradient(145deg, #1d1d1d, #111);
+            border-color: #555; color: #fff; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5), inset 0 0 5px rgba(255,255,255,0.05);
         }
 
-        .tab.dragging { opacity: 0.4; border: 1px dashed #fff; }
+        .tab.dragging { opacity: 0.2; border: 1px dashed #fff; }
 
-        .tab-input {
-            background: transparent;
-            border: none;
-            color: white;
-            font-family: inherit;
-            font-size: 13px;
-            width: 80px;
-            outline: none;
+        .tab-input { 
+            background: transparent; border: none; color: #fff; 
+            outline: none; width: 90px; font-family: inherit; 
+            border-bottom: 1px solid var(--accent-color);
         }
 
-        .tab-close { 
-            opacity: 0.4; margin-left: 10px; font-size: 16px; 
-            transition: 0.2s; cursor: pointer;
-        }
+        .tab-close { opacity: 0.3; font-size: 16px; cursor: pointer; transition: 0.2s; }
         .tab-close:hover { color: #ff5555; opacity: 1; }
 
         #new-tab-btn {
-            min-width: 32px; height: 32px;
-            border-radius: 8px; border: 1px solid var(--border-color);
-            display: flex; align-items: center; justify-content: center;
+            min-width: 34px; height: 34px; border-radius: 6px;
+            border: 1px solid var(--border-color); display: flex;
+            align-items: center; justify-content: center;
             cursor: pointer; transition: 0.3s; color: var(--secondary-text);
         }
-        #new-tab-btn:hover { background: var(--hover-color); color: white; }
+        #new-tab-btn:hover { background: var(--hover-color); color: #fff; border-color: #444; }
 
-        #container { flex-grow: 1; border-top: 1px solid var(--border-color); }
-
-        /* --- Expanded Notifications --- */
-        .toast-container {
-            position: fixed; bottom: 20px; right: 20px;
-            z-index: 9999; display: flex; flex-direction: column-reverse; gap: 8px;
+        /* --- Command Palette --- */
+        #palette {
+            position: fixed; top: -100px; left: 50%; transform: translateX(-50%);
+            width: 450px; background: rgba(15, 15, 15, 0.95); 
+            border: 1px solid #333; border-radius: 10px; z-index: 10000; padding: 12px;
+            transition: top 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28); 
+            box-shadow: 0 25px 50px rgba(0,0,0,0.9);
+            backdrop-filter: blur(10px);
+        }
+        #palette.open { top: 60px; }
+        #palette input {
+            width: 100%; background: #000; border: 1px solid #222;
+            color: #fff; padding: 10px; border-radius: 5px; 
+            outline: none; font-family: inherit; font-size: 14px;
         }
 
+        /* --- Editor --- */
+        #container { flex-grow: 1; }
+
+        /* --- Notifications --- */
+        .toast-container { position: fixed; bottom: 25px; right: 25px; display: flex; flex-direction: column-reverse; gap: 8px; z-index: 9999; }
         .toast {
-            padding: 10px 18px;
-            border-radius: 4px;
-            background: #0f0f0f;
-            border: 1px solid var(--border-color);
-            border-left: 3px solid #fff;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.6);
-            transform: translateX(140%);
-            transition: transform 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28);
-            font-size: 12px; min-width: 240px;
-            display: flex; align-items: center;
+            padding: 12px 20px; background: #0f0f0f; border: 1px solid #222; 
+            border-left: 3px solid var(--accent-color); border-radius: 4px;
+            transform: translateX(160%); transition: var(--transition); 
+            font-size: 12px; min-width: 250px; display: flex; align-items: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
-
         .toast.show { transform: translateX(0); }
-        .toast-tag { color: #666; font-weight: bold; margin-right: 10px; font-size: 10px; }
+        .toast-tag { color: #555; font-weight: bold; margin-right: 12px; font-size: 10px; text-transform: uppercase; }
     </style>
 </head>
 <body>
+
+    <div id="palette">
+        <input type="text" id="palette-input" placeholder="Type a command (e.g. >clear) or script name...">
+    </div>
+
     <div id="main-container">
         <div class="toast-container" id="toast-container"></div>
         <div id="tab-bar">
@@ -132,6 +124,7 @@
 
         let editor, activeTab = null, tabs = [];
 
+        // --- Notification Engine ---
         function notify(msg, tag = "INFO") {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
@@ -139,12 +132,31 @@
             toast.innerHTML = `<span class="toast-tag">${tag}</span> <span>${msg}</span>`;
             container.appendChild(toast);
             setTimeout(() => toast.classList.add('show'), 50);
-            setTimeout(() => {
-                toast.classList.remove('show');
-                setTimeout(() => toast.remove(), 500);
+            setTimeout(() => { 
+                toast.classList.remove('show'); 
+                setTimeout(() => toast.remove(), 500); 
             }, 3000);
         }
 
+        // --- Persistence (Local Storage) ---
+        function saveSession() {
+            if (activeTab) activeTab.content = editor.getValue();
+            const data = tabs.map(t => ({ name: t.name, content: t.content }));
+            localStorage.setItem('provoid_lightning_v2', JSON.stringify(data));
+        }
+
+        function loadSession() {
+            const data = localStorage.getItem('provoid_lightning_v2');
+            if (data) {
+                const saved = JSON.parse(data);
+                saved.forEach(t => createTab(t.name, t.content, false));
+                notify("Session Restored", "SYSTEM");
+            } else {
+                createTab('Main.lua', '-- Welcome to ProVoid\nprint("Hello World")');
+            }
+        }
+
+        // --- Tab Logic (Fixing Naming Bug) ---
         function getNextTabName() {
             let i = 1;
             while (true) {
@@ -154,7 +166,7 @@
             }
         }
 
-        function createTab(name = null, content = '-- New Lua Script') {
+        function createTab(name = null, content = '-- ProVoid Script', isNew = true) {
             const finalName = name || getNextTabName();
             const tab = {
                 id: Math.random().toString(36).substr(2, 9),
@@ -165,61 +177,28 @@
 
             tab.element.className = 'tab';
             tab.element.draggable = true;
-            tab.element.innerHTML = `<span class="tab-label">${tab.name}</span><span class="tab-close">×</span>`;
+            tab.element.innerHTML = `<span class="tab-lbl">${tab.name}</span><span class="tab-close">×</span>`;
             
-            // Reordering logic (Drag and Drop)
+            // Reordering logic
             tab.element.addEventListener('dragstart', () => tab.element.classList.add('dragging'));
             tab.element.addEventListener('dragend', () => {
                 tab.element.classList.remove('dragging');
-                notify("Reordered scripts", "LAYOUT");
+                reorderTabs();
             });
 
-            // Click to Activate
             tab.element.onclick = () => activateTab(tab);
-
-            // Double Click to Rename
             tab.element.ondblclick = () => renameTab(tab);
-
             tab.element.querySelector('.tab-close').onclick = (e) => {
                 e.stopPropagation();
-                closeTab(tab);
+                closeTab(tab.id);
             };
 
             const btn = document.getElementById('new-tab-btn');
             document.getElementById('tab-bar').insertBefore(tab.element, btn);
             tabs.push(tab);
             activateTab(tab);
-            notify(`Created ${finalName}`, "FILESYSTEM");
+            if(isNew) notify(`Created ${finalName}`, "FILE");
             return tab;
-        }
-
-        function renameTab(tab) {
-            const label = tab.element.querySelector('.tab-label');
-            const oldName = tab.name;
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.className = 'tab-input';
-            input.value = oldName;
-            
-            label.replaceWith(input);
-            input.focus();
-            input.select();
-
-            const finishRename = () => {
-                const newName = input.value.trim() || oldName;
-                tab.name = newName;
-                const newLabel = document.createElement('span');
-                newLabel.className = 'tab-label';
-                newLabel.innerText = newName;
-                input.replaceWith(newLabel);
-                if(newName !== oldName) notify(`Renamed to ${newName}`, "FILESYSTEM");
-            };
-
-            input.onblur = finishRename;
-            input.onkeydown = (e) => {
-                if(e.key === 'Enter') finishRename();
-                if(e.key === 'Escape') { input.value = oldName; finishRename(); }
-            };
         }
 
         function activateTab(tab) {
@@ -235,42 +214,134 @@
             }
         }
 
-        function closeTab(tab) {
-            if (tabs.length <= 1) return notify("Must have 1 active script", "ERROR");
-            tab.element.remove();
-            tabs = tabs.filter(t => t.id !== tab.id);
-            if (activeTab === tab) activateTab(tabs[tabs.length - 1]);
-            notify(`Deleted ${tab.name}`, "FILESYSTEM");
+        function renameTab(tab) {
+            const lbl = tab.element.querySelector('.tab-lbl');
+            const oldName = tab.name;
+            const input = document.createElement('input');
+            input.className = 'tab-input';
+            input.value = oldName;
+            
+            lbl.replaceWith(input);
+            input.focus();
+            input.select();
+
+            const finish = () => {
+                const newName = input.value.trim() || oldName;
+                tab.name = newName;
+                const newLbl = document.createElement('span');
+                newLbl.className = 'tab-lbl';
+                newLbl.innerText = newName;
+                input.replaceWith(newLbl);
+                if(newName !== oldName) {
+                    notify(`Renamed to ${newName}`, "FILE");
+                    saveSession();
+                }
+            };
+
+            input.onblur = finish;
+            input.onkeydown = (e) => { if(e.key === 'Enter') finish(); };
         }
 
-        // Drag over logic for reordering
+        function closeTab(id) {
+            if (tabs.length <= 1) return notify("Last script cannot be closed", "ERROR");
+            const idx = tabs.findIndex(t => t.id === id);
+            const closedName = tabs[idx].name;
+            tabs[idx].element.remove();
+            tabs.splice(idx, 1);
+            if (activeTab.id === id) activateTab(tabs[tabs.length - 1] || tabs[0]);
+            notify(`Closed ${closedName}`, "FILE");
+            saveSession();
+        }
+
+        // --- Drag and Drop Reordering ---
+        function reorderTabs() {
+            const currentElements = [...document.querySelectorAll('.tab')];
+            const newTabs = [];
+            currentElements.forEach(el => {
+                const found = tabs.find(t => t.element === el);
+                if (found) newTabs.push(found);
+            });
+            tabs = newTabs;
+            saveSession();
+            notify("Layout updated", "UI");
+        }
+
         const tabBar = document.getElementById('tab-bar');
         tabBar.addEventListener('dragover', e => {
             e.preventDefault();
-            const draggingTask = document.querySelector('.dragging');
+            const dragging = document.querySelector('.dragging');
             const afterElement = getDragAfterElement(tabBar, e.clientX);
             if (afterElement == null) {
-                tabBar.insertBefore(draggingTask, document.getElementById('new-tab-btn'));
+                tabBar.insertBefore(dragging, document.getElementById('new-tab-btn'));
             } else {
-                tabBar.insertBefore(draggingTask, afterElement);
+                tabBar.insertBefore(dragging, afterElement);
             }
         });
 
         function getDragAfterElement(container, x) {
-            const draggableElements = [...container.querySelectorAll('.tab:not(.dragging)')];
-            return draggableElements.reduce((closest, child) => {
+            const draggables = [...container.querySelectorAll('.tab:not(.dragging)')];
+            return draggables.reduce((closest, child) => {
                 const box = child.getBoundingClientRect();
                 const offset = x - box.left - box.width / 2;
                 if (offset < 0 && offset > closest.offset) {
                     return { offset: offset, element: child };
-                } else {
-                    return closest;
-                }
+                } else { return closest; }
             }, { offset: Number.NEGATIVE_INFINITY }).element;
         }
 
+        // --- Command Palette & Shortcuts ---
+        window.addEventListener('keydown', e => {
+            if (e.ctrlKey && e.key === 'p') {
+                e.preventDefault();
+                document.getElementById('palette').classList.toggle('open');
+                document.getElementById('palette-input').focus();
+            }
+            if (e.ctrlKey && e.key === 's') { e.preventDefault(); saveSession(); notify("Session Saved", "DISK"); }
+            if (e.ctrlKey && e.key === 'n') { e.preventDefault(); createTab(); }
+            if (e.ctrlKey && e.key === 'w') { e.preventDefault(); closeTab(activeTab.id); }
+        });
+
+        document.getElementById('palette-input').onkeydown = e => {
+            if (e.key === 'Enter') {
+                const cmd = e.target.value.toLowerCase();
+                if (cmd === '>clear') {
+                    editor.setValue('');
+                    notify("Editor content cleared", "EXEC");
+                } else if (cmd === '>new') {
+                    createTab();
+                } else {
+                    const found = tabs.find(t => t.name.toLowerCase().includes(cmd));
+                    if (found) {
+                        activateTab(found);
+                        notify(`Jumped to ${found.name}`, "NAV");
+                    }
+                }
+                document.getElementById('palette').classList.remove('open');
+                e.target.value = '';
+            }
+            if (e.key === 'Escape') {
+                document.getElementById('palette').classList.remove('open');
+                e.target.value = '';
+            }
+        };
+
+        // --- Monaco Initialization ---
         require(['vs/editor/editor.main'], function() {
-            monaco.editor.defineTheme('provoidWhite', {
+            // Define custom Lua completions
+            monaco.languages.registerCompletionItemProvider('lua', {
+                provideCompletionItems: () => {
+                    var suggestions = [
+                        { label: 'print', kind: monaco.languages.CompletionItemKind.Function, insertText: 'print("${1:message}")', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet },
+                        { label: 'wait', kind: monaco.languages.CompletionItemKind.Function, insertText: 'task.wait(${1:1})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet },
+                        { label: 'GetService', kind: monaco.languages.CompletionItemKind.Method, insertText: 'game:GetService("${1:RunService}")', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet },
+                        { label: 'local', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'local ' }
+                    ];
+                    return { suggestions: suggestions };
+                }
+            });
+
+            // Clean Dark Theme
+            monaco.editor.defineTheme('provoidUltra', {
                 base: 'vs-dark',
                 inherit: true,
                 rules: [],
@@ -278,21 +349,29 @@
                     'editor.background': '#080808',
                     'editor.lineHighlightBackground': '#111111',
                     'editorCursor.foreground': '#ffffff',
-                    'editorIndentGuide.activeBackground': '#444'
+                    'editorLineNumber.foreground': '#333333',
+                    'editorIndentGuide.background': '#151515'
                 }
             });
 
             editor = monaco.editor.create(document.getElementById('container'), {
-                theme: 'provoidWhite',
+                theme: 'provoidUltra',
                 language: 'lua',
-                automaticLayout: true,
                 fontSize: 14,
                 fontFamily: 'JetBrains Mono',
-                minimap: { enabled: true }
+                automaticLayout: true,
+                padding: { top: 15 },
+                minimap: { enabled: true },
+                smoothScrolling: true,
+                cursorBlinking: "smooth"
             });
 
-            createTab('Main.lua', '-- ProVoid Lightning v2\nprint("ProVoid Is Updated!")');
-            setTimeout(() => notify("Compiler linked successfully", "PROVOID"), 1000);
+            loadSession();
+            
+            // Autosave on change
+            editor.onDidChangeModelContent(() => {
+                saveSession();
+            });
         });
 
         document.getElementById('new-tab-btn').onclick = () => createTab();
