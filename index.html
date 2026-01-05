@@ -7,7 +7,6 @@
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&display=swap');
 
         :root {
-            /* ProVoid Signature Palette */
             --bg-color: #080808;
             --text-color: #f0f0f0;
             --accent-color: #ffffff;
@@ -31,7 +30,6 @@
 
         #main-container { display: flex; flex-direction: column; height: 100%; }
 
-        /* --- Tab Bar --- */
         #tab-bar {
             height: 54px; display: flex; align-items: center;
             padding: 0 15px; gap: 8px;
@@ -72,7 +70,6 @@
         }
         #new-tab-btn:hover { background: var(--hover-color); color: #fff; border-color: #444; }
 
-        /* --- Command Palette --- */
         #palette {
             position: fixed; top: -100px; left: 50%; transform: translateX(-50%);
             width: 450px; background: rgba(15, 15, 15, 0.95); 
@@ -88,10 +85,8 @@
             outline: none; font-family: inherit; font-size: 14px;
         }
 
-        /* --- Editor --- */
         #container { flex-grow: 1; }
 
-        /* --- Notifications --- */
         .toast-container { position: fixed; bottom: 25px; right: 25px; display: flex; flex-direction: column-reverse; gap: 8px; z-index: 9999; }
         .toast {
             padding: 12px 20px; background: #0f0f0f; border: 1px solid #222; 
@@ -124,6 +119,18 @@
 
         let editor, activeTab = null, tabs = [];
 
+        // --- C# BRIDGE FUNCTIONS (FIXES CLEAR & SCRIPT TREE) ---
+        window.SetText = function(text) {
+            if (editor) {
+                editor.setValue(text);
+                if (activeTab) activeTab.content = text; // Sync current tab
+            }
+        };
+
+        window.GetText = function() {
+            return editor ? editor.getValue() : "";
+        };
+
         // --- Notification Engine ---
         function notify(msg, tag = "INFO") {
             const container = document.getElementById('toast-container');
@@ -138,7 +145,7 @@
             }, 3000);
         }
 
-        // --- Persistence (Local Storage) ---
+        // --- Persistence ---
         function saveSession() {
             if (activeTab) activeTab.content = editor.getValue();
             const data = tabs.map(t => ({ name: t.name, content: t.content }));
@@ -150,13 +157,11 @@
             if (data) {
                 const saved = JSON.parse(data);
                 saved.forEach(t => createTab(t.name, t.content, false));
-                notify("Session Restored", "SYSTEM");
             } else {
                 createTab('Main.lua', '-- Welcome to ProVoid\nprint("Hello World")');
             }
         }
 
-        // --- Tab Logic (Fixing Naming Bug) ---
         function getNextTabName() {
             let i = 1;
             while (true) {
@@ -179,7 +184,6 @@
             tab.element.draggable = true;
             tab.element.innerHTML = `<span class="tab-lbl">${tab.name}</span><span class="tab-close">×</span>`;
             
-            // Reordering logic
             tab.element.addEventListener('dragstart', () => tab.element.classList.add('dragging'));
             tab.element.addEventListener('dragend', () => {
                 tab.element.classList.remove('dragging');
@@ -220,7 +224,6 @@
             const input = document.createElement('input');
             input.className = 'tab-input';
             input.value = oldName;
-            
             lbl.replaceWith(input);
             input.focus();
             input.select();
@@ -232,12 +235,8 @@
                 newLbl.className = 'tab-lbl';
                 newLbl.innerText = newName;
                 input.replaceWith(newLbl);
-                if(newName !== oldName) {
-                    notify(`Renamed to ${newName}`, "FILE");
-                    saveSession();
-                }
+                if(newName !== oldName) saveSession();
             };
-
             input.onblur = finish;
             input.onkeydown = (e) => { if(e.key === 'Enter') finish(); };
         }
@@ -245,15 +244,12 @@
         function closeTab(id) {
             if (tabs.length <= 1) return notify("Last script cannot be closed", "ERROR");
             const idx = tabs.findIndex(t => t.id === id);
-            const closedName = tabs[idx].name;
             tabs[idx].element.remove();
             tabs.splice(idx, 1);
             if (activeTab.id === id) activateTab(tabs[tabs.length - 1] || tabs[0]);
-            notify(`Closed ${closedName}`, "FILE");
             saveSession();
         }
 
-        // --- Drag and Drop Reordering ---
         function reorderTabs() {
             const currentElements = [...document.querySelectorAll('.tab')];
             const newTabs = [];
@@ -263,7 +259,6 @@
             });
             tabs = newTabs;
             saveSession();
-            notify("Layout updated", "UI");
         }
 
         const tabBar = document.getElementById('tab-bar');
@@ -289,58 +284,8 @@
             }, { offset: Number.NEGATIVE_INFINITY }).element;
         }
 
-        // --- Command Palette & Shortcuts ---
-        window.addEventListener('keydown', e => {
-            if (e.ctrlKey && e.key === 'p') {
-                e.preventDefault();
-                document.getElementById('palette').classList.toggle('open');
-                document.getElementById('palette-input').focus();
-            }
-            if (e.ctrlKey && e.key === 's') { e.preventDefault(); saveSession(); notify("Session Saved", "DISK"); }
-            if (e.ctrlKey && e.key === 'n') { e.preventDefault(); createTab(); }
-            if (e.ctrlKey && e.key === 'w') { e.preventDefault(); closeTab(activeTab.id); }
-        });
-
-        document.getElementById('palette-input').onkeydown = e => {
-            if (e.key === 'Enter') {
-                const cmd = e.target.value.toLowerCase();
-                if (cmd === '>clear') {
-                    editor.setValue('');
-                    notify("Editor content cleared", "EXEC");
-                } else if (cmd === '>new') {
-                    createTab();
-                } else {
-                    const found = tabs.find(t => t.name.toLowerCase().includes(cmd));
-                    if (found) {
-                        activateTab(found);
-                        notify(`Jumped to ${found.name}`, "NAV");
-                    }
-                }
-                document.getElementById('palette').classList.remove('open');
-                e.target.value = '';
-            }
-            if (e.key === 'Escape') {
-                document.getElementById('palette').classList.remove('open');
-                e.target.value = '';
-            }
-        };
-
         // --- Monaco Initialization ---
         require(['vs/editor/editor.main'], function() {
-            // Define custom Lua completions
-            monaco.languages.registerCompletionItemProvider('lua', {
-                provideCompletionItems: () => {
-                    var suggestions = [
-                        { label: 'print', kind: monaco.languages.CompletionItemKind.Function, insertText: 'print("${1:message}")', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet },
-                        { label: 'wait', kind: monaco.languages.CompletionItemKind.Function, insertText: 'task.wait(${1:1})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet },
-                        { label: 'GetService', kind: monaco.languages.CompletionItemKind.Method, insertText: 'game:GetService("${1:RunService}")', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet },
-                        { label: 'local', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'local ' }
-                    ];
-                    return { suggestions: suggestions };
-                }
-            });
-
-            // Clean Dark Theme
             monaco.editor.defineTheme('provoidUltra', {
                 base: 'vs-dark',
                 inherit: true,
@@ -367,11 +312,7 @@
             });
 
             loadSession();
-            
-            // Autosave on change
-            editor.onDidChangeModelContent(() => {
-                saveSession();
-            });
+            editor.onDidChangeModelContent(() => { saveSession(); });
         });
 
         document.getElementById('new-tab-btn').onclick = () => createTab();
