@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>System Update | ProVoid</title>
+    <style type="text/css">
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+        :root {
+            --bg-color: #050505;
+            --accent-white: #ffffff;
+            --muted-gray: #444444;
+            --dim-text: #888888;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--accent-white);
+            font-family: 'JetBrains Mono', monospace;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .update-container {
+            text-align: center;
+            max-width: 450px;
+            padding: 40px;
+            border: 1px solid #111;
+            border-radius: 20px;
+            background: radial-gradient(circle at center, #0a0a0a 0%, #050505 100%);
+        }
+
+        .status-light {
+            width: 12px;
+            height: 12px;
+            background-color: var(--accent-white);
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            box-shadow: 0 0 15px var(--accent-white);
+            animation: pulse 2s infinite ease-in-out;
+        }
+
+        h1 {
+            font-size: 18px;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+
+        p {
+            font-size: 12px;
+            color: var(--dim-text);
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+
+        /* --- Progress Bar --- */
+        .progress-track {
+            width: 100%;
+            height: 4px;
+            background: #111;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .progress-fill {
+            width: 30%;
+            height: 100%;
+            background: var(--accent-white);
+            box-shadow: 0 0 10px var(--accent-white);
+            animation: progressSim 4s infinite linear;
+        }
+
+        .console-log {
+            font-size: 10px;
+            color: #333;
+            text-transform: uppercase;
+            height: 15px;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.5; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes progressSim {
+            0% { width: 0%; transform: translateX(-100%); }
+            50% { width: 50%; }
+            100% { width: 100%; transform: translateX(100%); }
+        }
+
+        .footer-brand {
+            position: fixed;
+            bottom: 30px;
+            font-size: 10px;
+            color: #222;
+            letter-spacing: 2px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="update-container">
+        <div class="status-light"></div>
+        <h1>Updating</h1>
+        <p>ProVoid Lightning is currently undergoing scheduled maintenance. Services will resume shortly.</p>
+        
+        <div class="progress-track">
+            <div class="progress-fill"></div>
+        </div>
+        
+        <div class="console-log" id="log">Synchronizing Modules...</div>
+    </div>
+
+    <div class="footer-brand">PROVOID ECOSYSTEM v2.0</div>
+
+    <script>
+        const logs = [
+            "Syncing API...",
+            "patching kernel...",
+            "optimizing monaco-engine...",
+            "securing tunnel...",
+            "verifying checksum..."
+        ];
+        let i = 0;
+        setInterval(() => {
+            document.getElementById('log').innerText = logs[i];
+            i = (i + 1) % logs.length;
+        }, 2000);
+    </script>
+</body>
+</html>
