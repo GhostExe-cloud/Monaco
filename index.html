@@ -5,7 +5,6 @@
     <title>ProVoid Lightning | Ultra</title>
     <style type="text/css">
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&display=swap');
-
         :root {
             --bg-color: #080808;
             --text-color: #f0f0f0;
@@ -17,9 +16,8 @@
             --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             --border-radius: 8px;
         }
-
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        
+       
         body {
             width: 100%; height: 100vh;
             background: var(--bg-color);
@@ -27,16 +25,13 @@
             font-family: 'JetBrains Mono', monospace;
             overflow: hidden;
         }
-
         #main-container { display: flex; flex-direction: column; height: 100%; }
-
         #tab-bar {
             height: 54px; display: flex; align-items: center;
             padding: 0 15px; gap: 8px;
             background: #0a0a0a; border-bottom: 1px solid var(--border-color);
             overflow-x: auto;
         }
-
         .tab {
             height: 36px; min-width: 140px; padding: 0 12px;
             background: var(--secondary-bg); border: 1px solid var(--border-color);
@@ -44,24 +39,19 @@
             cursor: grab; transition: var(--transition); font-size: 13px; color: var(--secondary-text);
             user-select: none;
         }
-
         .tab.active {
             background: linear-gradient(145deg, #1d1d1d, #111);
-            border-color: #555; color: #fff; 
+            border-color: #555; color: #fff;
             box-shadow: 0 4px 12px rgba(0,0,0,0.5), inset 0 0 5px rgba(255,255,255,0.05);
         }
-
         .tab.dragging { opacity: 0.2; border: 1px dashed #fff; }
-
-        .tab-input { 
-            background: transparent; border: none; color: #fff; 
-            outline: none; width: 90px; font-family: inherit; 
+        .tab-input {
+            background: transparent; border: none; color: #fff;
+            outline: none; width: 90px; font-family: inherit;
             border-bottom: 1px solid var(--accent-color);
         }
-
         .tab-close { opacity: 0.3; font-size: 16px; cursor: pointer; transition: 0.2s; }
         .tab-close:hover { color: #ff5555; opacity: 1; }
-
         #new-tab-btn {
             min-width: 34px; height: 34px; border-radius: 6px;
             border: 1px solid var(--border-color); display: flex;
@@ -69,15 +59,13 @@
             cursor: pointer; transition: 0.3s; color: var(--secondary-text);
         }
         #new-tab-btn:hover { background: var(--hover-color); color: #fff; border-color: #444; }
-
         #container { flex-grow: 1; }
-
         /* --- NOTIFICATION STYLES --- */
         .toast-container { position: fixed; bottom: 25px; right: 25px; display: flex; flex-direction: column-reverse; gap: 8px; z-index: 9999; }
         .toast {
-            padding: 12px 20px; background: #0f0f0f; border: 1px solid #222; 
+            padding: 12px 20px; background: #0f0f0f; border: 1px solid #222;
             border-left: 3px solid var(--accent-color); border-radius: 4px;
-            transform: translateX(160%); transition: var(--transition); 
+            transform: translateX(160%); transition: var(--transition);
             font-size: 12px; min-width: 250px; display: flex; align-items: center;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
@@ -86,10 +74,8 @@
     </style>
 </head>
 <body>
-
     <div id="main-container">
         <div class="toast-container" id="toast-container"></div>
-
         <div id="tab-bar">
             <div id="new-tab-btn">+</div>
         </div>
@@ -109,26 +95,23 @@
             toast.className = 'toast';
             toast.innerHTML = `<span class="toast-tag">${tag}</span> <span>${msg}</span>`;
             container.appendChild(toast);
-            
-            // Trigger animation
+           
             setTimeout(() => toast.classList.add('show'), 50);
-            
-            // Auto-remove
-            setTimeout(() => { 
-                toast.classList.remove('show'); 
-                setTimeout(() => toast.remove(), 500); 
+           
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 500);
             }, 4000);
         }
 
-        // --- C# BRIDGE (FIXES CLEAR & SCRIPT TREE) ---
-        // These window-level functions are what your C# ExecuteScriptAsync calls
+        // --- C# BRIDGE ---
         window.SetText = function(text) {
             if (editor) {
                 editor.setValue(text);
                 if (activeTab) {
                     activeTab.content = text;
+                    saveTabs(); // save immediately when C# loads text
                 }
-                // Notify the user that the bridge worked
                 notify(text === "" ? "Editor Cleared" : "Script Loaded from Tree", "BRIDGE");
             }
         };
@@ -136,6 +119,58 @@
         window.GetText = function() {
             return editor ? editor.getValue() : "";
         };
+
+        // --- TAB PERSISTENCE ---
+        function saveTabs() {
+            if (!activeTab) return;
+            activeTab.content = editor.getValue(); // sync current editor content
+
+            const data = {
+                activeTabId: activeTab ? activeTab.id : null,
+                tabs: tabs.map(t => ({
+                    id: t.id,
+                    name: t.name,
+                    content: t.content
+                }))
+            };
+            localStorage.setItem('provoid_tabs', JSON.stringify(data));
+        }
+
+        function loadTabs() {
+            const saved = localStorage.getItem('provoid_tabs');
+            if (!saved) {
+                // Default tab if nothing saved
+                createTab('Main.lua', '-- ProVoid Lightning v2\nprint("Attached!")', false);
+                return;
+            }
+
+            try {
+                const data = JSON.parse(saved);
+                tabs = [];
+
+                // Restore tabs
+                data.tabs.forEach(t => {
+                    const tab = createTab(t.name, t.content, false);
+                    tab.id = t.id; // preserve original ID
+                    tabs.push(tab);
+                });
+
+                // Restore active tab
+                if (data.activeTabId) {
+                    const toActivate = tabs.find(t => t.id === data.activeTabId);
+                    if (toActivate) activateTab(toActivate);
+                    else if (tabs.length > 0) activateTab(tabs[0]);
+                } else if (tabs.length > 0) {
+                    activateTab(tabs[0]);
+                }
+
+                notify(`Restored ${tabs.length} tab${tabs.length === 1 ? '' : 's'}`, "LOAD");
+            } catch (err) {
+                console.error("Failed to load tabs:", err);
+                notify("Failed to restore tabs – starting fresh", "ERROR");
+                createTab('Main.lua', '-- ProVoid Lightning v2\nprint("Attached!")', false);
+            }
+        }
 
         // --- TAB LOGIC ---
         function createTab(name = null, content = '-- ProVoid Script', isNew = true) {
@@ -146,23 +181,33 @@
                 content: content,
                 element: document.createElement('div')
             };
-
             tab.element.className = 'tab';
             tab.element.draggable = true;
-            tab.element.innerHTML = `<span class="tab-lbl">${tab.name}</span><span class="tab-close">×</span>`;
-            
-            tab.element.onclick = () => activateTab(tab);
-            tab.element.querySelector('.tab-close').onclick = (e) => {
-                e.stopPropagation();
+            tab.element.innerHTML = `
+                <span class="tab-lbl">${tab.name}</span>
+                <span class="tab-close">×</span>
+            `;
+           
+            tab.element.onclick = () => {
+                activateTab(tab);
+                saveTabs(); // save on switch
+            };
+
+            tab.element.querySelector('.tab-close').onclick = (ev) => {
+                ev.stopPropagation();
                 closeTab(tab.id);
             };
 
             const btn = document.getElementById('new-tab-btn');
             document.getElementById('tab-bar').insertBefore(tab.element, btn);
             tabs.push(tab);
-            activateTab(tab);
-            
-            if(isNew) notify(`Opened ${finalName}`, "FILE");
+
+            if (isNew) {
+                activateTab(tab);
+                notify(`Opened ${finalName}`, "FILE");
+            }
+
+            saveTabs(); // save after creating
             return tab;
         }
 
@@ -174,19 +219,28 @@
             activeTab = tab;
             tab.element.classList.add('active');
             if (editor) {
-                editor.setValue(tab.content);
+                editor.setValue(tab.content || '-- ProVoid Script');
             }
+            saveTabs(); // save active state
         }
 
         function closeTab(id) {
             if (tabs.length <= 1) return notify("Cannot close last tab", "ERROR");
+
             const idx = tabs.findIndex(t => t.id === id);
+            if (idx === -1) return;
+
             tabs[idx].element.remove();
             tabs.splice(idx, 1);
-            if (activeTab.id === id) activateTab(tabs[tabs.length - 1] || tabs[0]);
+
+            if (activeTab?.id === id) {
+                activateTab(tabs[tabs.length - 1] || tabs[0]);
+            }
+
+            saveTabs(); // save after close
         }
 
-        // --- MONACO INIT ---
+        // --- MONACO INIT & TAB LOAD ---
         require(['vs/editor/editor.main'], function() {
             monaco.editor.defineTheme('provoidUltra', {
                 base: 'vs-dark', inherit: true,
@@ -205,12 +259,24 @@
                 minimap: { enabled: false }
             });
 
-            // Start with one tab
-            createTab('Main.lua', '-- ProVoid Lightning v2\nprint("Attached!")', false);
+            // Load saved tabs (or create default)
+            loadTabs();
+
+            // Save on every change
+            editor.onDidChangeModelContent(() => {
+                if (activeTab) {
+                    activeTab.content = editor.getValue();
+                    saveTabs();
+                }
+            });
+
             notify("Monaco Engine Ready", "SYSTEM");
         });
 
         document.getElementById('new-tab-btn').onclick = () => createTab();
+
+        // Save on window close/unload
+        window.addEventListener('beforeunload', saveTabs);
     </script>
 </body>
 </html>
