@@ -17,7 +17,7 @@
             --border-radius: 8px;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-       
+        
         body {
             width: 100%; height: 100vh;
             background: var(--bg-color);
@@ -38,22 +38,22 @@
             height: 36px; min-width: 140px; padding: 0 12px;
             background: var(--secondary-bg); border: 1px solid var(--border-color);
             border-radius: 6px; display: flex; align-items: center; justify-content: space-between;
-            cursor: grab; transition: var(--transition); font-size: 13px; color: var(--secondary-text);
-            user-select: none;
+            cursor: pointer; transition: var(--transition); font-size: 13px; color: var(--secondary-text);
+            user-select: none; position: relative;
         }
         .tab.active {
             background: linear-gradient(145deg, #1d1d1d, #111);
             border-color: #555; color: #fff;
             box-shadow: 0 4px 12px rgba(0,0,0,0.5), inset 0 0 5px rgba(255,255,255,0.05);
         }
-        .tab.dragging { opacity: 0.2; border: 1px dashed #fff; }
         .tab-input {
-            background: transparent; border: none; color: #fff;
-            outline: none; width: 90px; font-family: inherit;
-            border-bottom: 1px solid var(--accent-color);
+            background: #1a1a1a; border: 1px solid var(--accent-color); color: #fff;
+            outline: none; width: 100%; font-family: inherit; font-size: 12px;
+            padding: 2px 4px; border-radius: 4px;
         }
-        .tab-close { opacity: 0.3; font-size: 16px; cursor: pointer; transition: 0.2s; }
+        .tab-close { opacity: 0.3; font-size: 16px; cursor: pointer; transition: 0.2s; margin-left: 8px; }
         .tab-close:hover { color: #ff5555; opacity: 1; }
+        
         #new-tab-btn {
             min-width: 34px; height: 34px; border-radius: 6px;
             border: 1px solid var(--border-color); display: flex;
@@ -63,21 +63,11 @@
         #new-tab-btn:hover { background: var(--hover-color); color: #fff; border-color: #444; }
         #container { flex-grow: 1; }
 
-        /* Custom dark scrollbar for #tab-bar (horizontal) */
-        #tab-bar::-webkit-scrollbar {
-            height: 6px;
-        }
-        #tab-bar::-webkit-scrollbar-track {
-            background: #0a0a0a;
-            border-radius: 3px;
-        }
-        #tab-bar::-webkit-scrollbar-thumb {
-            background: #333333;
-            border-radius: 3px;
-        }
-        #tab-bar::-webkit-scrollbar-thumb:hover {
-            background: #555555;
-        }
+        /* Custom dark scrollbar */
+        #tab-bar::-webkit-scrollbar { height: 6px; }
+        #tab-bar::-webkit-scrollbar-track { background: #0a0a0a; border-radius: 3px; }
+        #tab-bar::-webkit-scrollbar-thumb { background: #333333; border-radius: 3px; }
+        #tab-bar::-webkit-scrollbar-thumb:hover { background: #555555; }
 
         /* --- NOTIFICATION STYLES --- */
         .toast-container { position: fixed; bottom: 25px; right: 25px; display: flex; flex-direction: column-reverse; gap: 8px; z-index: 9999; }
@@ -114,9 +104,7 @@
             toast.className = 'toast';
             toast.innerHTML = `<span class="toast-tag">${tag}</span> <span>${msg}</span>`;
             container.appendChild(toast);
-           
             setTimeout(() => toast.classList.add('show'), 50);
-           
             setTimeout(() => {
                 toast.classList.remove('show');
                 setTimeout(() => toast.remove(), 500);
@@ -129,9 +117,9 @@
                 editor.setValue(text);
                 if (activeTab) {
                     activeTab.content = text;
-                    saveTabs(); // save immediately when C# loads text
+                    saveTabs();
                 }
-                notify(text === "" ? "Editor Cleared" : "Script Loaded from Tree", "BRIDGE");
+                notify(text === "" ? "Editor Cleared" : "Script Loaded", "BRIDGE");
             }
         };
 
@@ -151,6 +139,7 @@
             activeTab.scrollTop = scrollTop;
 
             const data = {
+                timestamp: Date.now(),
                 activeTabId: activeTab.id,
                 tabs: tabs.map(t => ({
                     id: t.id,
@@ -160,57 +149,55 @@
                     scrollTop: t.scrollTop || 0
                 }))
             };
-
             localStorage.setItem('provoid_tabs', JSON.stringify(data));
         }
 
         function loadTabs() {
             const saved = localStorage.getItem('provoid_tabs');
             if (!saved) {
-                // Default tab with print script
-                createTab('Main.lua', 'print("Welcome to ProVoid Lightning | Ultra")', false);
+                createTab(null, 'print("Welcome to ProVoid Lightning | Ultra")', false);
                 return;
             }
 
             try {
                 const data = JSON.parse(saved);
-                tabs = [];
+                const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+                if (Date.now() - data.timestamp > ONE_DAY_MS) {
+                    notify("Tabs expired – starting fresh", "INFO");
+                    createTab(null, 'print("Welcome to ProVoid Lightning | Ultra")', false);
+                    return;
+                }
 
+                tabs = [];
                 data.tabs.forEach(t => {
                     const tab = createTab(t.name, t.content, false);
                     tab.id = t.id;
                     tab.cursor = t.cursor;
                     tab.scrollTop = t.scrollTop || 0;
-                    tabs.push(tab);
                 });
 
-                let toActivate = tabs.find(t => t.id === data.activeTabId);
-                if (!toActivate && tabs.length > 0) toActivate = tabs[0];
+                let toActivate = tabs.find(t => t.id === data.activeTabId) || tabs[0];
+                if (toActivate) activateTab(toActivate);
 
-                if (toActivate) {
-                    activateTab(toActivate);
-                    if (toActivate.cursor) {
-                        editor.setPosition(toActivate.cursor);
-                        editor.revealPositionInCenter(toActivate.cursor);
-                    }
-                    if (toActivate.scrollTop) {
-                        editor.setScrollTop(toActivate.scrollTop);
-                    }
-                }
-
-                // Improved: accurate count + singular/plural
-                const count = tabs.length;
-                notify(`Restored ${count} tab${count === 1 ? '' : 's'}`, "LOAD");
             } catch (err) {
-                console.error("Failed to load tabs:", err);
-                notify("Failed to restore tabs – starting fresh", "ERROR");
-                createTab('Main.lua', 'print("Welcome to ProVoid Lightning | Ultra")', false);
+                createTab(null, 'print("Welcome to ProVoid Lightning | Ultra")', false);
             }
         }
 
         // --- TAB LOGIC ---
         function createTab(name = null, content = '-- ProVoid Script', isNew = true) {
-            const finalName = name || `Script ${tabs.length + 1}`;
+            let finalName = name;
+            
+            // LOGIC: Find lowest available number if no name provided
+            if (!finalName) {
+                let i = 1;
+                const currentNames = tabs.map(t => t.name);
+                while (currentNames.includes(`Script ${i}`)) {
+                    i++;
+                }
+                finalName = `Script ${i}`;
+            }
+
             const tab = {
                 id: Math.random().toString(36).substr(2, 9),
                 name: finalName,
@@ -219,18 +206,40 @@
                 scrollTop: 0,
                 element: document.createElement('div')
             };
+
             tab.element.className = 'tab';
-            tab.element.draggable = true;
-            tab.element.innerHTML = `
-                <span class="tab-lbl">${tab.name}</span>
-                <span class="tab-close">×</span>
-            `;
-           
-            tab.element.onclick = () => {
-                activateTab(tab);
-                saveTabs();
+            tab.element.innerHTML = `<span class="tab-lbl">${tab.name}</span><span class="tab-close">×</span>`;
+            
+            // Tab Switch logic
+            tab.element.onclick = () => activateTab(tab);
+
+            // Rename logic (Double Click)
+            tab.element.ondblclick = (e) => {
+                e.stopPropagation();
+                const lbl = tab.element.querySelector('.tab-lbl');
+                const input = document.createElement('input');
+                input.className = 'tab-input';
+                input.value = tab.name;
+                
+                lbl.replaceWith(input);
+                input.focus();
+                input.select();
+
+                const finishRename = () => {
+                    const newName = input.value.trim() || tab.name;
+                    tab.name = newName;
+                    const newLbl = document.createElement('span');
+                    newLbl.className = 'tab-lbl';
+                    newLbl.innerText = newName;
+                    input.replaceWith(newLbl);
+                    saveTabs();
+                };
+
+                input.onblur = finishRename;
+                input.onkeydown = (ke) => { if(ke.key === 'Enter') finishRename(); };
             };
 
+            // Close logic
             tab.element.querySelector('.tab-close').onclick = (ev) => {
                 ev.stopPropagation();
                 closeTab(tab.id);
@@ -252,8 +261,7 @@
         function activateTab(tab) {
             if (activeTab) {
                 activeTab.content = editor.getValue();
-                const pos = editor.getPosition();
-                activeTab.cursor = pos ? { lineNumber: pos.lineNumber, column: pos.column } : null;
+                activeTab.cursor = editor.getPosition();
                 activeTab.scrollTop = editor.getScrollTop();
                 activeTab.element.classList.remove('active');
             }
@@ -262,45 +270,31 @@
             tab.element.classList.add('active');
 
             if (editor) {
-                editor.setValue(tab.content || '-- ProVoid Script');
-                
+                editor.setValue(tab.content);
                 if (tab.cursor) {
                     editor.setPosition(tab.cursor);
                     editor.revealPositionInCenter(tab.cursor);
                 }
-                if (tab.scrollTop) {
-                    editor.setScrollTop(tab.scrollTop);
-                }
+                if (tab.scrollTop) editor.setScrollTop(tab.scrollTop);
             }
-
             saveTabs();
         }
 
         function closeTab(id) {
             if (tabs.length <= 1) return notify("Cannot close last tab", "ERROR");
-
             const idx = tabs.findIndex(t => t.id === id);
-            if (idx === -1) return;
-
             tabs[idx].element.remove();
             tabs.splice(idx, 1);
-
-            if (activeTab?.id === id) {
-                activateTab(tabs[tabs.length - 1] || tabs[0]);
-            }
-
+            if (activeTab?.id === id) activateTab(tabs[tabs.length - 1] || tabs[0]);
             saveTabs();
         }
 
-        // --- MONACO INIT & TAB LOAD ---
+        // --- MONACO INIT ---
         require(['vs/editor/editor.main'], function() {
             monaco.editor.defineTheme('provoidUltra', {
                 base: 'vs-dark', inherit: true,
                 rules: [],
-                colors: {
-                    'editor.background': '#080808',
-                    'editorLineNumber.foreground': '#333333'
-                }
+                colors: { 'editor.background': '#080808', 'editorLineNumber.foreground': '#333333' }
             });
 
             editor = monaco.editor.create(document.getElementById('container'), {
@@ -312,20 +306,13 @@
             });
 
             loadTabs();
-
             editor.onDidChangeModelContent(() => {
-                if (activeTab) {
-                    activeTab.content = editor.getValue();
-                    saveTabs();
-                }
+                if (activeTab) { activeTab.content = editor.getValue(); saveTabs(); }
             });
-
-            notify("Monaco Engine Ready", "SYSTEM");
+            notify("System Online", "READY");
         });
 
         document.getElementById('new-tab-btn').onclick = () => createTab();
-
-        // Save on window close/unload
         window.addEventListener('beforeunload', saveTabs);
     </script>
 </body>
