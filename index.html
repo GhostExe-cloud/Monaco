@@ -115,6 +115,23 @@
 
         let editor, activeTab = null, tabs = [];
 
+        // --- BRIDGE FUNCTIONS FOR C# ---
+        window.SetText = function(content) {
+            if (editor) {
+                // If we have an active tab, update it. If not, create one.
+                if (activeTab) {
+                    editor.setValue(content);
+                } else {
+                    createTab("Imported", content, true);
+                }
+            }
+        };
+
+        window.GetText = function() {
+            return editor ? editor.getValue() : "";
+        };
+        // -------------------------------
+
         function celebrate() {
             confetti({
                 particleCount: 150,
@@ -205,7 +222,7 @@
         }
 
         function activateTab(tab) {
-            if (activeTab) {
+            if (activeTab && activeTab.id !== tab.id) {
                 activeTab.content = editor.getValue();
                 activeTab.element.classList.remove('active');
             }
@@ -256,9 +273,8 @@
             });
 
             editor.onDidChangeModelContent(() => {
-                if (activeTab && !activeTab.element.classList.contains('active')) {
-                    activeTab.element.classList.add('dirty');
-                }
+                // If change came from user (not setValue), mark tab as dirty/save
+                saveTabs();
             });
 
             const saved = localStorage.getItem('provoid_tabs_v3');
