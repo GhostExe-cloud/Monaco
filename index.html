@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <title>ProVoid Lightning | Ultra</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style type="text/css">
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&display=swap');
         :root {
@@ -14,95 +15,134 @@
             --secondary-bg: #0d0d0d;
             --secondary-text: #808080;
             --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            --border-radius: 8px;
+            --birthday-gold: #ffd700;
         }
+
         * { box-sizing: border-box; margin: 0; padding: 0; }
         
-        body {
-            width: 100%; height: 100vh;
+        body, html {
+            width: 100%; height: 100%;
             background: var(--bg-color);
             color: var(--text-color);
             font-family: 'JetBrains Mono', monospace;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
-        #main-container { display: flex; flex-direction: column; height: 100%; }
+
+        /* --- BIRTHDAY BANNER --- */
+        #birthday-banner {
+            display: none; 
+            flex-shrink: 0;
+            background: linear-gradient(90deg, #0a0a0a, #1a1600, #0a0a0a);
+            border-bottom: 1px solid rgba(255, 215, 0, 0.3);
+            padding: 10px 25px;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .bday-text { color: var(--birthday-gold); font-size: 12px; font-weight: 600; text-shadow: 0 0 10px rgba(255,215,0,0.3); }
+        .donate-btn {
+            background: var(--birthday-gold); color: #000;
+            padding: 4px 12px; border-radius: 4px;
+            text-decoration: none; font-weight: 800; font-size: 10px;
+            text-transform: uppercase; transition: 0.3s;
+        }
+        .donate-btn:hover { background: #fff; box-shadow: 0 0 15px rgba(255,215,0,0.5); }
+
+        /* --- TAB BAR --- */
         #tab-bar {
-            height: 54px; display: flex; align-items: center;
+            height: 54px; flex-shrink: 0;
+            display: flex; align-items: center;
             padding: 0 15px; gap: 8px;
             background: #0a0a0a; border-bottom: 1px solid var(--border-color);
-            overflow-x: auto;
-            scrollbar-width: thin;
-            scrollbar-color: #333333 #0a0a0a;
+            overflow-x: auto; scrollbar-width: none;
         }
+        #tab-bar::-webkit-scrollbar { display: none; }
+
         .tab {
-            height: 36px; min-width: 140px; padding: 0 12px;
+            height: 36px; min-width: 150px; padding: 0 12px;
             background: var(--secondary-bg); border: 1px solid var(--border-color);
             border-radius: 6px; display: flex; align-items: center; justify-content: space-between;
             cursor: pointer; transition: var(--transition); font-size: 13px; color: var(--secondary-text);
             user-select: none; position: relative;
         }
-        .tab.active {
-            background: linear-gradient(145deg, #1d1d1d, #111);
-            border-color: #555; color: #fff;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5), inset 0 0 5px rgba(255,255,255,0.05);
+        .tab.active { background: #1a1a1a; border-color: #444; color: #fff; }
+        
+        .tab.dirty::after {
+            content: ''; position: absolute; top: 5px; left: 5px;
+            width: 6px; height: 6px; background: var(--birthday-gold); border-radius: 50%;
         }
-        .tab-input {
-            background: #1a1a1a; border: 1px solid var(--accent-color); color: #fff;
-            outline: none; width: 100%; font-family: inherit; font-size: 12px;
-            padding: 2px 4px; border-radius: 4px;
-        }
-        .tab-close { opacity: 0.3; font-size: 16px; cursor: pointer; transition: 0.2s; margin-left: 8px; }
+
+        .tab-lbl { flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: none; }
+        .tab-close { opacity: 0.3; font-size: 16px; margin-left: 8px; width: 15px; text-align: center; }
         .tab-close:hover { color: #ff5555; opacity: 1; }
         
         #new-tab-btn {
             min-width: 34px; height: 34px; border-radius: 6px;
             border: 1px solid var(--border-color); display: flex;
             align-items: center; justify-content: center;
-            cursor: pointer; transition: 0.3s; color: var(--secondary-text);
+            cursor: pointer; color: var(--secondary-text);
         }
-        #new-tab-btn:hover { background: var(--hover-color); color: #fff; border-color: #444; }
-        #container { flex-grow: 1; }
+        #new-tab-btn:hover { background: var(--hover-color); color: #fff; }
 
-        /* Custom dark scrollbar */
-        #tab-bar::-webkit-scrollbar { height: 6px; }
-        #tab-bar::-webkit-scrollbar-track { background: #0a0a0a; border-radius: 3px; }
-        #tab-bar::-webkit-scrollbar-thumb { background: #333333; border-radius: 3px; }
-        #tab-bar::-webkit-scrollbar-thumb:hover { background: #555555; }
+        #container { flex-grow: 1; width: 100%; }
 
-        /* --- NOTIFICATION STYLES --- */
+        /* TOASTS */
         .toast-container { position: fixed; bottom: 25px; right: 25px; display: flex; flex-direction: column-reverse; gap: 8px; z-index: 9999; }
         .toast {
             padding: 12px 20px; background: #0f0f0f; border: 1px solid #222;
             border-left: 3px solid var(--accent-color); border-radius: 4px;
             transform: translateX(160%); transition: var(--transition);
-            font-size: 12px; min-width: 250px; display: flex; align-items: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            font-size: 11px; min-width: 220px; color: #fff;
         }
         .toast.show { transform: translateX(0); }
-        .toast-tag { color: #555; font-weight: bold; margin-right: 12px; font-size: 10px; text-transform: uppercase; }
     </style>
 </head>
 <body>
-    <div id="main-container">
-        <div class="toast-container" id="toast-container"></div>
-        <div id="tab-bar">
-            <div id="new-tab-btn">+</div>
-        </div>
-        <div id="container"></div>
+
+    <div id="birthday-banner">
+        <span class="bday-text">✨ HAPPY BIRTHDAY PROVOID DEVELOPER! ✨</span>
+        <a href="#" class="donate-btn">🎁 SEND A GIFT</a>
     </div>
+
+    <div id="tab-bar">
+        <div id="new-tab-btn">+</div>
+    </div>
+    
+    <div id="container"></div>
+    <div class="toast-container" id="toast-container"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.33.0/min/vs/loader.min.js"></script>
     <script>
         require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.33.0/min/vs' } });
 
         let editor, activeTab = null, tabs = [];
+        const isTesting = true; 
 
-        // --- NOTIFICATION ENGINE ---
+        function celebrate() {
+            confetti({
+                particleCount: 150,
+                spread: 70,
+                origin: { y: 0.6 },
+                colors: ['#ffd700', '#ffffff', '#ff0000']
+            });
+        }
+
+        function checkBirthday() {
+            const now = new Date();
+            const banner = document.getElementById('birthday-banner');
+            // Jan is 0, so month 0 = January
+            if (isTesting || (now.getMonth() === 0 && (now.getDate() === 18 || now.getDate() === 19))) {
+                banner.style.display = 'flex';
+                setTimeout(celebrate, 1000);
+            }
+        }
+
         function notify(msg, tag = "INFO") {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
             toast.className = 'toast';
-            toast.innerHTML = `<span class="toast-tag">${tag}</span> <span>${msg}</span>`;
+            toast.innerHTML = `<span style="opacity:0.5; font-weight:bold; margin-right:8px">${tag}</span> ${msg}`;
             container.appendChild(toast);
             setTimeout(() => toast.classList.add('show'), 50);
             setTimeout(() => {
@@ -111,90 +151,12 @@
             }, 4000);
         }
 
-        // --- C# BRIDGE ---
-        window.SetText = function(text) {
-            if (editor) {
-                editor.setValue(text);
-                if (activeTab) {
-                    activeTab.content = text;
-                    saveTabs();
-                }
-                notify(text === "" ? "Editor Cleared" : "Script Loaded", "BRIDGE");
-            }
-        };
-
-        window.GetText = function() {
-            return editor ? editor.getValue() : "";
-        };
-
-        // --- TAB & CURSOR PERSISTENCE ---
-        function saveTabs() {
-            if (!activeTab || !editor) return;
-
-            activeTab.content = editor.getValue();
-            const position = editor.getPosition();
-            const scrollTop = editor.getScrollTop();
-
-            activeTab.cursor = position ? { lineNumber: position.lineNumber, column: position.column } : null;
-            activeTab.scrollTop = scrollTop;
-
-            const data = {
-                timestamp: Date.now(),
-                activeTabId: activeTab.id,
-                tabs: tabs.map(t => ({
-                    id: t.id,
-                    name: t.name,
-                    content: t.content,
-                    cursor: t.cursor,
-                    scrollTop: t.scrollTop || 0
-                }))
-            };
-            localStorage.setItem('provoid_tabs', JSON.stringify(data));
-        }
-
-        function loadTabs() {
-            const saved = localStorage.getItem('provoid_tabs');
-            if (!saved) {
-                createTab(null, 'print("Welcome to ProVoid Lightning | Ultra")', false);
-                return;
-            }
-
-            try {
-                const data = JSON.parse(saved);
-                const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-                if (Date.now() - data.timestamp > ONE_DAY_MS) {
-                    notify("Tabs expired – starting fresh", "INFO");
-                    createTab(null, 'print("Welcome to ProVoid Lightning | Ultra")', false);
-                    return;
-                }
-
-                tabs = [];
-                data.tabs.forEach(t => {
-                    const tab = createTab(t.name, t.content, false);
-                    tab.id = t.id;
-                    tab.cursor = t.cursor;
-                    tab.scrollTop = t.scrollTop || 0;
-                });
-
-                let toActivate = tabs.find(t => t.id === data.activeTabId) || tabs[0];
-                if (toActivate) activateTab(toActivate);
-
-            } catch (err) {
-                createTab(null, 'print("Welcome to ProVoid Lightning | Ultra")', false);
-            }
-        }
-
-        // --- TAB LOGIC ---
-        function createTab(name = null, content = '-- ProVoid Script', isNew = true) {
+        function createTab(name = null, content = 'print("Happy BirthDay!")', isNew = true) {
             let finalName = name;
-            
-            // LOGIC: Find lowest available number if no name provided
             if (!finalName) {
                 let i = 1;
                 const currentNames = tabs.map(t => t.name);
-                while (currentNames.includes(`Script ${i}`)) {
-                    i++;
-                }
+                while (currentNames.includes(`Script ${i}`)) { i++; }
                 finalName = `Script ${i}`;
             }
 
@@ -202,44 +164,35 @@
                 id: Math.random().toString(36).substr(2, 9),
                 name: finalName,
                 content: content,
-                cursor: null,
-                scrollTop: 0,
                 element: document.createElement('div')
             };
 
             tab.element.className = 'tab';
             tab.element.innerHTML = `<span class="tab-lbl">${tab.name}</span><span class="tab-close">×</span>`;
             
-            // Tab Switch logic
             tab.element.onclick = () => activateTab(tab);
-
-            // Rename logic (Double Click)
+            
             tab.element.ondblclick = (e) => {
                 e.stopPropagation();
                 const lbl = tab.element.querySelector('.tab-lbl');
                 const input = document.createElement('input');
-                input.className = 'tab-input';
+                input.style.cssText = "background:#111; border:1px solid #333; color:#fff; width:100%; outline:none; font-family:inherit; font-size:12px; padding:2px;";
                 input.value = tab.name;
-                
                 lbl.replaceWith(input);
                 input.focus();
                 input.select();
-
                 const finishRename = () => {
-                    const newName = input.value.trim() || tab.name;
-                    tab.name = newName;
+                    tab.name = input.value.trim() || tab.name;
                     const newLbl = document.createElement('span');
-                    newLbl.className = 'tab-lbl';
-                    newLbl.innerText = newName;
+                    newLbl.className = "tab-lbl";
+                    newLbl.innerText = tab.name;
                     input.replaceWith(newLbl);
                     saveTabs();
                 };
-
                 input.onblur = finishRename;
-                input.onkeydown = (ke) => { if(ke.key === 'Enter') finishRename(); };
+                input.onkeydown = (k) => { if(k.key === 'Enter') finishRename(); };
             };
 
-            // Close logic
             tab.element.querySelector('.tab-close').onclick = (ev) => {
                 ev.stopPropagation();
                 closeTab(tab.id);
@@ -249,52 +202,48 @@
             document.getElementById('tab-bar').insertBefore(tab.element, btn);
             tabs.push(tab);
 
-            if (isNew) {
-                activateTab(tab);
-                notify(`Opened ${finalName}`, "FILE");
-            }
-
-            saveTabs();
+            if (isNew) activateTab(tab);
             return tab;
         }
 
         function activateTab(tab) {
             if (activeTab) {
                 activeTab.content = editor.getValue();
-                activeTab.cursor = editor.getPosition();
-                activeTab.scrollTop = editor.getScrollTop();
                 activeTab.element.classList.remove('active');
             }
-
             activeTab = tab;
             tab.element.classList.add('active');
-
-            if (editor) {
-                editor.setValue(tab.content);
-                if (tab.cursor) {
-                    editor.setPosition(tab.cursor);
-                    editor.revealPositionInCenter(tab.cursor);
-                }
-                if (tab.scrollTop) editor.setScrollTop(tab.scrollTop);
-            }
+            tab.element.classList.remove('dirty'); 
+            if (editor) editor.setValue(tab.content);
             saveTabs();
         }
 
         function closeTab(id) {
-            if (tabs.length <= 1) return notify("Cannot close last tab", "ERROR");
+            if (tabs.length <= 1) return notify("Cannot close last tab", "SYSTEM");
             const idx = tabs.findIndex(t => t.id === id);
             tabs[idx].element.remove();
             tabs.splice(idx, 1);
-            if (activeTab?.id === id) activateTab(tabs[tabs.length - 1] || tabs[0]);
+            if (activeTab?.id === id) activateTab(tabs[0]);
             saveTabs();
         }
 
-        // --- MONACO INIT ---
+        function saveTabs() {
+            if (!activeTab || !editor) return;
+            localStorage.setItem('provoid_tabs_v3', JSON.stringify({
+                activeTabId: activeTab.id,
+                tabs: tabs.map(t => ({ 
+                    id: t.id, 
+                    name: t.name, 
+                    content: t.id === activeTab.id ? editor.getValue() : t.content 
+                }))
+            }));
+        }
+
         require(['vs/editor/editor.main'], function() {
             monaco.editor.defineTheme('provoidUltra', {
                 base: 'vs-dark', inherit: true,
                 rules: [],
-                colors: { 'editor.background': '#080808', 'editorLineNumber.foreground': '#333333' }
+                colors: { 'editor.background': '#080808', 'editorCursor.foreground': '#ffd700' }
             });
 
             editor = monaco.editor.create(document.getElementById('container'), {
@@ -302,18 +251,33 @@
                 language: 'lua',
                 fontSize: 14,
                 automaticLayout: true,
+                cursorBlinking: "expand",
+                smoothScrolling: true,
+                cursorSmoothCaretAnimation: true,
                 minimap: { enabled: false }
             });
 
-            loadTabs();
             editor.onDidChangeModelContent(() => {
-                if (activeTab) { activeTab.content = editor.getValue(); saveTabs(); }
+                if (activeTab) {
+                    // Only add dirty dot if we aren't already marked
+                    if (!activeTab.element.classList.contains('dirty')) {
+                        activeTab.element.classList.add('dirty');
+                    }
+                }
             });
-            notify("System Online", "READY");
+
+            const saved = localStorage.getItem('provoid_tabs_v3');
+            if (saved) {
+                const data = JSON.parse(saved);
+                data.tabs.forEach(t => createTab(t.name, t.content, false));
+                activateTab(tabs.find(t => t.id === data.activeTabId) || tabs[0]);
+            } else {
+                createTab(null, '-- Welcome to ProVoid Lightning', false);
+            }
+            checkBirthday();
         });
 
         document.getElementById('new-tab-btn').onclick = () => createTab();
-        window.addEventListener('beforeunload', saveTabs);
     </script>
 </body>
 </html>
