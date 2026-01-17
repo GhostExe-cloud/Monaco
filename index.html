@@ -30,7 +30,6 @@
             flex-direction: column;
         }
 
-        /* --- BIRTHDAY BANNER --- */
         #birthday-banner {
             display: none; 
             flex-shrink: 0;
@@ -49,7 +48,6 @@
         }
         .donate-btn:hover { background: #fff; box-shadow: 0 0 15px rgba(255,215,0,0.5); }
 
-        /* --- TAB BAR --- */
         #tab-bar {
             height: 54px; flex-shrink: 0;
             display: flex; align-items: center;
@@ -87,7 +85,6 @@
 
         #container { flex-grow: 1; width: 100%; }
 
-        /* TOASTS */
         .toast-container { position: fixed; bottom: 25px; right: 25px; display: flex; flex-direction: column-reverse; gap: 8px; z-index: 9999; }
         .toast {
             padding: 12px 20px; background: #0f0f0f; border: 1px solid #222;
@@ -117,7 +114,6 @@
         require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.33.0/min/vs' } });
 
         let editor, activeTab = null, tabs = [];
-        const isTesting = true; 
 
         function celebrate() {
             confetti({
@@ -131,10 +127,12 @@
         function checkBirthday() {
             const now = new Date();
             const banner = document.getElementById('birthday-banner');
-            // Jan is 0, so month 0 = January
-            if (isTesting || (now.getMonth() === 0 && (now.getDate() === 18 || now.getDate() === 19))) {
+            const isJanuary = now.getMonth() === 0;
+            const isBirthdayDay = (now.getDate() === 18 || now.getDate() === 19);
+
+            if (isJanuary && isBirthdayDay) {
                 banner.style.display = 'flex';
-                setTimeout(celebrate, 1000);
+                setTimeout(celebrate, 1500);
             }
         }
 
@@ -258,11 +256,8 @@
             });
 
             editor.onDidChangeModelContent(() => {
-                if (activeTab) {
-                    // Only add dirty dot if we aren't already marked
-                    if (!activeTab.element.classList.contains('dirty')) {
-                        activeTab.element.classList.add('dirty');
-                    }
+                if (activeTab && !activeTab.element.classList.contains('active')) {
+                    activeTab.element.classList.add('dirty');
                 }
             });
 
@@ -272,7 +267,7 @@
                 data.tabs.forEach(t => createTab(t.name, t.content, false));
                 activateTab(tabs.find(t => t.id === data.activeTabId) || tabs[0]);
             } else {
-                createTab(null, '-- Welcome to ProVoid Lightning', false);
+                createTab(null, '-- ProVoid Lightning v4', false);
             }
             checkBirthday();
         });
