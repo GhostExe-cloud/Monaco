@@ -31,6 +31,8 @@
             padding: 0 15px; gap: 8px;
             background: #0a0a0a; border-bottom: 1px solid var(--border-color);
             overflow-x: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #333333 #0a0a0a;
         }
         .tab {
             height: 36px; min-width: 140px; padding: 0 12px;
@@ -60,6 +62,23 @@
         }
         #new-tab-btn:hover { background: var(--hover-color); color: #fff; border-color: #444; }
         #container { flex-grow: 1; }
+
+        /* Custom dark scrollbar for #tab-bar (horizontal) */
+        #tab-bar::-webkit-scrollbar {
+            height: 6px;
+        }
+        #tab-bar::-webkit-scrollbar-track {
+            background: #0a0a0a;
+            border-radius: 3px;
+        }
+        #tab-bar::-webkit-scrollbar-thumb {
+            background: #333333;
+            border-radius: 3px;
+        }
+        #tab-bar::-webkit-scrollbar-thumb:hover {
+            background: #555555;
+        }
+
         /* --- NOTIFICATION STYLES --- */
         .toast-container { position: fixed; bottom: 25px; right: 25px; display: flex; flex-direction: column-reverse; gap: 8px; z-index: 9999; }
         .toast {
@@ -120,27 +139,36 @@
             return editor ? editor.getValue() : "";
         };
 
-        // --- TAB PERSISTENCE ---
+        // --- TAB & CURSOR PERSISTENCE ---
         function saveTabs() {
-            if (!activeTab) return;
-            activeTab.content = editor.getValue(); // sync current editor content
+            if (!activeTab || !editor) return;
+
+            activeTab.content = editor.getValue();
+            const position = editor.getPosition();
+            const scrollTop = editor.getScrollTop();
+
+            activeTab.cursor = position ? { lineNumber: position.lineNumber, column: position.column } : null;
+            activeTab.scrollTop = scrollTop;
 
             const data = {
-                activeTabId: activeTab ? activeTab.id : null,
+                activeTabId: activeTab.id,
                 tabs: tabs.map(t => ({
                     id: t.id,
                     name: t.name,
-                    content: t.content
+                    content: t.content,
+                    cursor: t.cursor,
+                    scrollTop: t.scrollTop || 0
                 }))
             };
+
             localStorage.setItem('provoid_tabs', JSON.stringify(data));
         }
 
         function loadTabs() {
             const saved = localStorage.getItem('provoid_tabs');
             if (!saved) {
-                // Default tab if nothing saved
-                createTab('Main.lua', '-- ProVoid Lightning v2\nprint("Attached!")', false);
+                // Default tab with print script
+                createTab('Main.lua', 'print("Welcome to ProVoid Lightning | Ultra")', false);
                 return;
             }
 
@@ -148,27 +176,35 @@
                 const data = JSON.parse(saved);
                 tabs = [];
 
-                // Restore tabs
                 data.tabs.forEach(t => {
                     const tab = createTab(t.name, t.content, false);
-                    tab.id = t.id; // preserve original ID
+                    tab.id = t.id;
+                    tab.cursor = t.cursor;
+                    tab.scrollTop = t.scrollTop || 0;
                     tabs.push(tab);
                 });
 
-                // Restore active tab
-                if (data.activeTabId) {
-                    const toActivate = tabs.find(t => t.id === data.activeTabId);
-                    if (toActivate) activateTab(toActivate);
-                    else if (tabs.length > 0) activateTab(tabs[0]);
-                } else if (tabs.length > 0) {
-                    activateTab(tabs[0]);
+                let toActivate = tabs.find(t => t.id === data.activeTabId);
+                if (!toActivate && tabs.length > 0) toActivate = tabs[0];
+
+                if (toActivate) {
+                    activateTab(toActivate);
+                    if (toActivate.cursor) {
+                        editor.setPosition(toActivate.cursor);
+                        editor.revealPositionInCenter(toActivate.cursor);
+                    }
+                    if (toActivate.scrollTop) {
+                        editor.setScrollTop(toActivate.scrollTop);
+                    }
                 }
 
-                notify(`Restored ${tabs.length} tab${tabs.length === 1 ? '' : 's'}`, "LOAD");
+                // Improved: accurate count + singular/plural
+                const count = tabs.length;
+                notify(`Restored ${count} tab${count === 1 ? '' : 's'}`, "LOAD");
             } catch (err) {
                 console.error("Failed to load tabs:", err);
                 notify("Failed to restore tabs – starting fresh", "ERROR");
-                createTab('Main.lua', '-- ProVoid Lightning v2\nprint("Attached!")', false);
+                createTab('Main.lua', 'print("Welcome to ProVoid Lightning | Ultra")', false);
             }
         }
 
@@ -179,6 +215,8 @@
                 id: Math.random().toString(36).substr(2, 9),
                 name: finalName,
                 content: content,
+                cursor: null,
+                scrollTop: 0,
                 element: document.createElement('div')
             };
             tab.element.className = 'tab';
@@ -190,7 +228,7 @@
            
             tab.element.onclick = () => {
                 activateTab(tab);
-                saveTabs(); // save on switch
+                saveTabs();
             };
 
             tab.element.querySelector('.tab-close').onclick = (ev) => {
@@ -207,21 +245,35 @@
                 notify(`Opened ${finalName}`, "FILE");
             }
 
-            saveTabs(); // save after creating
+            saveTabs();
             return tab;
         }
 
         function activateTab(tab) {
             if (activeTab) {
                 activeTab.content = editor.getValue();
+                const pos = editor.getPosition();
+                activeTab.cursor = pos ? { lineNumber: pos.lineNumber, column: pos.column } : null;
+                activeTab.scrollTop = editor.getScrollTop();
                 activeTab.element.classList.remove('active');
             }
+
             activeTab = tab;
             tab.element.classList.add('active');
+
             if (editor) {
                 editor.setValue(tab.content || '-- ProVoid Script');
+                
+                if (tab.cursor) {
+                    editor.setPosition(tab.cursor);
+                    editor.revealPositionInCenter(tab.cursor);
+                }
+                if (tab.scrollTop) {
+                    editor.setScrollTop(tab.scrollTop);
+                }
             }
-            saveTabs(); // save active state
+
+            saveTabs();
         }
 
         function closeTab(id) {
@@ -237,7 +289,7 @@
                 activateTab(tabs[tabs.length - 1] || tabs[0]);
             }
 
-            saveTabs(); // save after close
+            saveTabs();
         }
 
         // --- MONACO INIT & TAB LOAD ---
@@ -259,10 +311,8 @@
                 minimap: { enabled: false }
             });
 
-            // Load saved tabs (or create default)
             loadTabs();
 
-            // Save on every change
             editor.onDidChangeModelContent(() => {
                 if (activeTab) {
                     activeTab.content = editor.getValue();
