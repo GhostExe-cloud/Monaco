@@ -6,20 +6,23 @@
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style type="text/css">
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&display=swap');
+
         :root {
-            --bg-color: #080808;
-            --text-color: #f0f0f0;
-            --accent-color: #ffffff;
-            --hover-color: #1a1a1a;
-            --border-color: #222222;
-            --secondary-bg: #0d0d0d;
-            --secondary-text: #808080;
-            --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            --birthday-gold: #ffd700;
+            --bg-color:        #080808;
+            --text-color:      #f0f0f0;
+            --accent-color:    #4CAF50;
+            --accent-dim:      rgba(76, 175, 80, 0.12);
+            --accent-border:   rgba(76, 175, 80, 0.35);
+            --hover-color:     #1a1a1a;
+            --border-color:    #222222;
+            --secondary-bg:    #0d0d0d;
+            --secondary-text:  #808080;
+            --transition:      0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --birthday-gold:   #ffd700;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        
+
         body, html {
             width: 100%; height: 100%;
             background: var(--bg-color);
@@ -30,8 +33,9 @@
             flex-direction: column;
         }
 
+        /* ── Birthday banner ─────────────────────────────── */
         #birthday-banner {
-            display: none; 
+            display: none;
             flex-shrink: 0;
             background: linear-gradient(90deg, #0a0a0a, #1a1600, #0a0a0a);
             border-bottom: 1px solid rgba(255, 215, 0, 0.3);
@@ -48,51 +52,155 @@
         }
         .donate-btn:hover { background: #fff; box-shadow: 0 0 15px rgba(255,215,0,0.5); }
 
+        /* ── Tab bar ─────────────────────────────────────── */
         #tab-bar {
-            height: 54px; flex-shrink: 0;
-            display: flex; align-items: center;
-            padding: 0 15px; gap: 8px;
-            background: #0a0a0a; border-bottom: 1px solid var(--border-color);
-            overflow-x: auto; scrollbar-width: none;
+            height: 46px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            gap: 6px;
+            background: #080808;
+            border-bottom: 1px solid #111111;
+            overflow-x: auto;
+            scrollbar-width: none;
         }
         #tab-bar::-webkit-scrollbar { display: none; }
 
         .tab {
-            height: 36px; min-width: 150px; padding: 0 12px;
-            background: var(--secondary-bg); border: 1px solid var(--border-color);
-            border-radius: 6px; display: flex; align-items: center; justify-content: space-between;
-            cursor: pointer; transition: var(--transition); font-size: 13px; color: var(--secondary-text);
-            user-select: none; position: relative;
-        }
-        .tab.active { background: #1a1a1a; border-color: #444; color: #fff; }
-        
-        .tab.dirty::after {
-            content: ''; position: absolute; top: 5px; left: 5px;
-            width: 6px; height: 6px; background: var(--birthday-gold); border-radius: 50%;
+            height: 32px;
+            min-width: 140px;
+            max-width: 200px;
+            padding: 0 10px;
+            background: #0d0d0d;
+            border: 1px solid #161616;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 12px;
+            color: #444444;
+            user-select: none;
+            position: relative;
+            overflow: hidden;
         }
 
-        .tab-lbl { flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: none; }
-        .tab-close { opacity: 0.3; font-size: 16px; margin-left: 8px; width: 15px; text-align: center; }
-        .tab-close:hover { color: #ff5555; opacity: 1; }
-        
+        /* Active tab: accent bottom bar + brightened */
+        .tab.active {
+            background: #111111;
+            border-color: #222222;
+            color: #cccccc;
+        }
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 8px; right: 8px;
+            height: 2px;
+            border-radius: 1px;
+            background: var(--accent-color);
+            box-shadow: 0 0 6px var(--accent-color);
+            transition: background var(--transition), box-shadow var(--transition);
+        }
+
+        /* Unsaved dot */
+        .tab.dirty::before {
+            content: '';
+            position: absolute;
+            top: 7px; left: 7px;
+            width: 5px; height: 5px;
+            background: var(--accent-color);
+            border-radius: 50%;
+            box-shadow: 0 0 4px var(--accent-color);
+            transition: background var(--transition), box-shadow var(--transition);
+        }
+
+        .tab:hover:not(.active) {
+            background: #0f0f0f;
+            border-color: #1e1e1e;
+            color: #666666;
+        }
+
+        .tab-lbl {
+            flex-grow: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            pointer-events: none;
+        }
+        .tab-close {
+            opacity: 0;
+            font-size: 14px;
+            margin-left: 8px;
+            width: 14px;
+            text-align: center;
+            transition: opacity 0.15s, color 0.15s;
+            flex-shrink: 0;
+        }
+        .tab:hover .tab-close { opacity: 0.4; }
+        .tab-close:hover { color: #ff5555 !important; opacity: 1 !important; }
+
+        /* New tab button */
         #new-tab-btn {
-            min-width: 34px; height: 34px; border-radius: 6px;
-            border: 1px solid var(--border-color); display: flex;
-            align-items: center; justify-content: center;
-            cursor: pointer; color: var(--secondary-text);
+            min-width: 30px; height: 30px;
+            border-radius: 6px;
+            border: 1px solid #161616;
+            background: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #333333;
+            font-size: 16px;
+            transition: var(--transition);
+            flex-shrink: 0;
         }
-        #new-tab-btn:hover { background: var(--hover-color); color: #fff; }
+        #new-tab-btn:hover { background: #111111; color: #666666; border-color: #222222; }
 
+        /* ── Editor container ────────────────────────────── */
         #container { flex-grow: 1; width: 100%; }
 
-        .toast-container { position: fixed; bottom: 25px; right: 25px; display: flex; flex-direction: column-reverse; gap: 8px; z-index: 9999; }
+        /* ── Toast notifications ─────────────────────────── */
+        .toast-container {
+            position: fixed; bottom: 20px; right: 20px;
+            display: flex; flex-direction: column-reverse;
+            gap: 6px; z-index: 9999;
+        }
         .toast {
-            padding: 12px 20px; background: #0f0f0f; border: 1px solid #222;
-            border-left: 3px solid var(--accent-color); border-radius: 4px;
-            transform: translateX(160%); transition: var(--transition);
-            font-size: 11px; min-width: 220px; color: #fff;
+            padding: 10px 16px;
+            background: #0d0d0d;
+            border: 1px solid #1a1a1a;
+            border-left: 2px solid var(--accent-color);
+            border-radius: 6px;
+            transform: translateX(160%);
+            transition: transform var(--transition);
+            font-size: 11px;
+            min-width: 200px;
+            color: #aaaaaa;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
         }
         .toast.show { transform: translateX(0); }
+        .toast-tag { color: var(--accent-color); font-weight: 600; margin-right: 6px; transition: color var(--transition); }
+
+        /* ── Scrollbar (webkit) ──────────────────────────── */
+        ::-webkit-scrollbar       { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1e1e1e; border-radius: 2px; }
+        ::-webkit-scrollbar-thumb:hover { background: #2a2a2a; }
+
+        /* ── Rename input ────────────────────────────────── */
+        .tab-rename-input {
+            background: #111;
+            border: 1px solid #333;
+            color: #fff;
+            width: 100%;
+            outline: none;
+            font-family: inherit;
+            font-size: 12px;
+            padding: 1px 2px;
+            border-radius: 2px;
+        }
     </style>
 </head>
 <body>
@@ -103,9 +211,9 @@
     </div>
 
     <div id="tab-bar">
-        <div id="new-tab-btn">+</div>
+        <div id="new-tab-btn" title="New tab (Ctrl+T)">+</div>
     </div>
-    
+
     <div id="container"></div>
     <div class="toast-container" id="toast-container"></div>
 
@@ -115,10 +223,145 @@
 
         let editor, activeTab = null, tabs = [];
 
-        // --- BRIDGE FUNCTIONS FOR C# ---
+        // ── Current theme state ───────────────────────────────────────
+        let _currentAccent = '#4CAF50';
+
+        // Derive dimmed / semi-transparent variants from a hex color
+        function hexToRgb(hex) {
+            hex = hex.replace('#', '');
+            if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+            const n = parseInt(hex, 16);
+            return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+        }
+        function accentAlpha(hex, a) {
+            const { r, g, b } = hexToRgb(hex);
+            return `rgba(${r},${g},${b},${a})`;
+        }
+
+        // ── BRIDGE: SetTheme (called from C# via ExecuteScriptAsync) ──
+        window.SetTheme = function(accentHex) {
+            _currentAccent = accentHex;
+
+            // 1. Update CSS variables on :root → instantly recolors all
+            //    tab indicators, toast borders, dirty dots, scrollbar accents
+            const root = document.documentElement;
+            root.style.setProperty('--accent-color',  accentHex);
+            root.style.setProperty('--accent-dim',    accentAlpha(accentHex, 0.12));
+            root.style.setProperty('--accent-border', accentAlpha(accentHex, 0.35));
+
+            // 2. Redefine the Monaco editor theme with the new accent
+            if (monaco && editor) {
+                monaco.editor.defineTheme('provoidUltra', buildTheme(accentHex));
+                monaco.editor.setTheme('provoidUltra');
+            }
+        };
+
+        // ── Build Monaco theme from accent hex ───────────────────────
+        function buildTheme(accent) {
+            const { r, g, b } = hexToRgb(accent);
+
+            // Slightly lighter tint for selection/highlight backgrounds
+            const selBg    = `#${Math.min(r + 20, 255).toString(16).padStart(2,'0')}${Math.min(g + 20, 255).toString(16).padStart(2,'0')}${Math.min(b + 20, 255).toString(16).padStart(2,'0')}28`;
+            const hlBg     = accentAlpha(accent, 0.10);
+
+            return {
+                base: 'vs-dark',
+                inherit: true,
+                rules: [
+                    // Lua keywords tinted with accent
+                    { token: 'keyword',           foreground: accent.replace('#',''),  fontStyle: '' },
+                    { token: 'keyword.lua',        foreground: accent.replace('#','') },
+                    // Strings stay a warm off-white
+                    { token: 'string',             foreground: 'c8a96e' },
+                    { token: 'string.lua',         foreground: 'c8a96e' },
+                    // Comments are dark gray
+                    { token: 'comment',            foreground: '404040', fontStyle: 'italic' },
+                    // Numbers get a lighter accent shade
+                    { token: 'number',             foreground: darkenHex(accent, 0.7) },
+                    // Functions slightly brighter than plain text
+                    { token: 'identifier',         foreground: 'd4d4d4' },
+                    { token: 'type',               foreground: 'aaaaaa' },
+                ],
+                colors: {
+                    // Core chrome
+                    'editor.background':                  '#080808',
+                    'editor.foreground':                  '#cccccc',
+
+                    // Cursor — accent colored
+                    'editorCursor.foreground':            accent,
+                    'editorCursor.background':            '#080808',
+
+                    // Selection / word highlight
+                    'editor.selectionBackground':         accentAlpha(accent, 0.22),
+                    'editor.selectionHighlightBackground': accentAlpha(accent, 0.10),
+                    'editor.inactiveSelectionBackground': accentAlpha(accent, 0.12),
+                    'editor.wordHighlightBackground':     accentAlpha(accent, 0.14),
+                    'editor.wordHighlightStrongBackground': accentAlpha(accent, 0.22),
+
+                    // Line highlight
+                    'editor.lineHighlightBackground':     '#0f0f0f',
+                    'editor.lineHighlightBorder':         '#141414',
+
+                    // Find/replace match
+                    'editor.findMatchBackground':         accentAlpha(accent, 0.35),
+                    'editor.findMatchHighlightBackground': accentAlpha(accent, 0.18),
+                    'editor.findRangeHighlightBackground': accentAlpha(accent, 0.10),
+
+                    // Gutter / line numbers
+                    'editorLineNumber.foreground':        '#2a2a2a',
+                    'editorLineNumber.activeForeground':  '#555555',
+                    'editorGutter.background':            '#080808',
+
+                    // Scrollbar
+                    'scrollbarSlider.background':         accentAlpha(accent, 0.08),
+                    'scrollbarSlider.hoverBackground':    accentAlpha(accent, 0.16),
+                    'scrollbarSlider.activeBackground':   accentAlpha(accent, 0.28),
+
+                    // Minimap
+                    'minimap.background':                 '#080808',
+                    'minimap.selectionHighlight':         accentAlpha(accent, 0.4),
+
+                    // Bracket match
+                    'editorBracketMatch.background':      accentAlpha(accent, 0.20),
+                    'editorBracketMatch.border':          accentAlpha(accent, 0.55),
+
+                    // Indent guides
+                    'editorIndentGuide.background':       '#161616',
+                    'editorIndentGuide.activeBackground': '#242424',
+
+                    // Widget / suggest box
+                    'editorSuggestWidget.background':     '#0d0d0d',
+                    'editorSuggestWidget.border':         '#1e1e1e',
+                    'editorSuggestWidget.foreground':     '#888888',
+                    'editorSuggestWidget.selectedBackground': accentAlpha(accent, 0.18),
+                    'editorSuggestWidget.highlightForeground': accent,
+
+                    // Hover widget
+                    'editorHoverWidget.background':       '#0d0d0d',
+                    'editorHoverWidget.border':           '#1e1e1e',
+
+                    // Focus border
+                    'focusBorder':                        accentAlpha(accent, 0.5),
+                }
+            };
+        }
+
+        // Returns a hex string darkened by factor (0=black, 1=original)
+        function darkenHex(hex, factor) {
+            const { r, g, b } = hexToRgb(hex);
+            const dr = Math.round(r + (255 - r) * (factor - 1) * -1 + (255 - r) * factor * 0.3).toString(16).padStart(2,'0');
+            const dg = Math.round(g + (255 - g) * (factor - 1) * -1 + (255 - g) * factor * 0.3).toString(16).padStart(2,'0');
+            const db = Math.round(b + (255 - b) * (factor - 1) * -1 + (255 - b) * factor * 0.3).toString(16).padStart(2,'0');
+            // Simple approach: just lighten the accent by mixing with white
+            const lr = Math.min(255, Math.round(r + (255 - r) * 0.35)).toString(16).padStart(2,'0');
+            const lg = Math.min(255, Math.round(g + (255 - g) * 0.35)).toString(16).padStart(2,'0');
+            const lb = Math.min(255, Math.round(b + (255 - b) * 0.35)).toString(16).padStart(2,'0');
+            return lr + lg + lb;
+        }
+
+        // ── BRIDGE: SetText ───────────────────────────────────────────
         window.SetText = function(content) {
             if (editor) {
-                // If we have an active tab, update it. If not, create one.
                 if (activeTab) {
                     editor.setValue(content);
                 } else {
@@ -130,48 +373,48 @@
         window.GetText = function() {
             return editor ? editor.getValue() : "";
         };
-        // -------------------------------
 
+        // ── Birthday easter egg ───────────────────────────────────────
         function celebrate() {
+            const { r, g, b } = hexToRgb(_currentAccent);
             confetti({
                 particleCount: 150,
                 spread: 70,
                 origin: { y: 0.6 },
-                colors: ['#ffd700', '#ffffff', '#ff0000']
+                colors: [`#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`, '#ffffff', '#ffd700']
             });
         }
 
         function checkBirthday() {
             const now = new Date();
             const banner = document.getElementById('birthday-banner');
-            const isJanuary = now.getMonth() === 0;
-            const isBirthdayDay = (now.getDate() === 18 || now.getDate() === 19);
-
-            if (isJanuary && isBirthdayDay) {
+            if (now.getMonth() === 0 && (now.getDate() === 18 || now.getDate() === 19)) {
                 banner.style.display = 'flex';
                 setTimeout(celebrate, 1500);
             }
         }
 
+        // ── Toast ─────────────────────────────────────────────────────
         function notify(msg, tag = "INFO") {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
             toast.className = 'toast';
-            toast.innerHTML = `<span style="opacity:0.5; font-weight:bold; margin-right:8px">${tag}</span> ${msg}`;
+            toast.innerHTML = `<span class="toast-tag">${tag}</span>${msg}`;
             container.appendChild(toast);
             setTimeout(() => toast.classList.add('show'), 50);
             setTimeout(() => {
                 toast.classList.remove('show');
-                setTimeout(() => toast.remove(), 500);
-            }, 4000);
+                setTimeout(() => toast.remove(), 400);
+            }, 3500);
         }
 
+        // ── Tab management ────────────────────────────────────────────
         function createTab(name = null, content = '-- ProVoid Script', isNew = true) {
             let finalName = name;
             if (!finalName) {
                 let i = 1;
                 const currentNames = tabs.map(t => t.name);
-                while (currentNames.includes(`Script ${i}`)) { i++; }
+                while (currentNames.includes(`Script ${i}`)) i++;
                 finalName = `Script ${i}`;
             }
 
@@ -183,15 +426,15 @@
             };
 
             tab.element.className = 'tab';
-            tab.element.innerHTML = `<span class="tab-lbl">${tab.name}</span><span class="tab-close">×</span>`;
-            
+            tab.element.innerHTML = `<span class="tab-lbl">${tab.name}</span><span class="tab-close" title="Close tab">×</span>`;
             tab.element.onclick = () => activateTab(tab);
-            
+
+            // Double-click to rename
             tab.element.ondblclick = (e) => {
                 e.stopPropagation();
                 const lbl = tab.element.querySelector('.tab-lbl');
                 const input = document.createElement('input');
-                input.style.cssText = "background:#111; border:1px solid #333; color:#fff; width:100%; outline:none; font-family:inherit; font-size:12px; padding:2px;";
+                input.className = 'tab-rename-input';
                 input.value = tab.name;
                 lbl.replaceWith(input);
                 input.focus();
@@ -199,13 +442,13 @@
                 const finishRename = () => {
                     tab.name = input.value.trim() || tab.name;
                     const newLbl = document.createElement('span');
-                    newLbl.className = "tab-lbl";
-                    newLbl.innerText = tab.name;
+                    newLbl.className = 'tab-lbl';
+                    newLbl.textContent = tab.name;
                     input.replaceWith(newLbl);
                     saveTabs();
                 };
                 input.onblur = finishRename;
-                input.onkeydown = (k) => { if(k.key === 'Enter') finishRename(); };
+                input.onkeydown = (k) => { if (k.key === 'Enter') finishRename(); k.stopPropagation(); };
             };
 
             tab.element.querySelector('.tab-close').onclick = (ev) => {
@@ -228,7 +471,7 @@
             }
             activeTab = tab;
             tab.element.classList.add('active');
-            tab.element.classList.remove('dirty'); 
+            tab.element.classList.remove('dirty');
             if (editor) editor.setValue(tab.content);
             saveTabs();
         }
@@ -238,7 +481,7 @@
             const idx = tabs.findIndex(t => t.id === id);
             tabs[idx].element.remove();
             tabs.splice(idx, 1);
-            if (activeTab?.id === id) activateTab(tabs[0]);
+            if (activeTab?.id === id) activateTab(tabs[Math.max(0, idx - 1)]);
             saveTabs();
         }
 
@@ -246,46 +489,80 @@
             if (!activeTab || !editor) return;
             localStorage.setItem('provoid_tabs_v3', JSON.stringify({
                 activeTabId: activeTab.id,
-                tabs: tabs.map(t => ({ 
-                    id: t.id, 
-                    name: t.name, 
-                    content: t.id === activeTab.id ? editor.getValue() : t.content 
+                tabs: tabs.map(t => ({
+                    id:      t.id,
+                    name:    t.name,
+                    content: t.id === activeTab.id ? editor.getValue() : t.content
                 }))
             }));
         }
 
+        // ── Monaco init ───────────────────────────────────────────────
         require(['vs/editor/editor.main'], function() {
-            monaco.editor.defineTheme('provoidUltra', {
-                base: 'vs-dark', inherit: true,
-                rules: [],
-                colors: { 'editor.background': '#080808', 'editorCursor.foreground': '#ffd700' }
-            });
+
+            // Define initial theme
+            monaco.editor.defineTheme('provoidUltra', buildTheme(_currentAccent));
 
             editor = monaco.editor.create(document.getElementById('container'), {
-                theme: 'provoidUltra',
-                language: 'lua',
-                fontSize: 14,
-                automaticLayout: true,
-                cursorBlinking: "expand",
-                smoothScrolling: true,
+                theme:                    'provoidUltra',
+                language:                 'lua',
+                fontSize:                 14,
+                fontFamily:               "'JetBrains Mono', 'Consolas', monospace",
+                lineHeight:               22,
+                automaticLayout:          true,
+                cursorBlinking:           'expand',
                 cursorSmoothCaretAnimation: true,
-                minimap: { enabled: false }
+                smoothScrolling:          true,
+                scrollBeyondLastLine:     false,
+                renderLineHighlight:      'line',
+                minimap:                  { enabled: false },
+                padding:                  { top: 12, bottom: 12 },
+                scrollbar: {
+                    verticalScrollbarSize:   4,
+                    horizontalScrollbarSize: 4,
+                    useShadows:              false,
+                },
+                overviewRulerBorder:      false,
+                hideCursorInOverviewRuler: true,
+                glyphMargin:              false,
+                folding:                  true,
+                renderWhitespace:         'none',
+                tabSize:                  4,
+                insertSpaces:             true,
+                wordWrap:                 'off',
+                suggest: {
+                    showKeywords: true,
+                    showSnippets: true,
+                },
             });
 
+            // Mark tab dirty on user edits
             editor.onDidChangeModelContent(() => {
-                // If change came from user (not setValue), mark tab as dirty/save
+                if (activeTab) activeTab.element.classList.add('dirty');
                 saveTabs();
             });
 
+            // Restore saved tabs
             const saved = localStorage.getItem('provoid_tabs_v3');
             if (saved) {
-                const data = JSON.parse(saved);
-                data.tabs.forEach(t => createTab(t.name, t.content, false));
-                activateTab(tabs.find(t => t.id === data.activeTabId) || tabs[0]);
+                try {
+                    const data = JSON.parse(saved);
+                    data.tabs.forEach(t => createTab(t.name, t.content, false));
+                    const target = tabs.find(t => t.id === data.activeTabId) || tabs[0];
+                    activateTab(target);
+                } catch {
+                    createTab(null, '-- ProVoid Lightning v4', false);
+                }
             } else {
                 createTab(null, '-- ProVoid Lightning v4', false);
             }
+
             checkBirthday();
+        });
+
+        // ── Ctrl+T shortcut ───────────────────────────────────────────
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 't') { e.preventDefault(); createTab(); }
         });
 
         document.getElementById('new-tab-btn').onclick = () => createTab();
